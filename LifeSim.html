@@ -186,13 +186,34 @@ body {
   color: var(--gold);
 }
 
-/* ПОТРЕБНОСТИ */
+/* ПОТРЕБНОСТИ — панель в одной рамке */
+#ui-bar .needs-panel {
+  width: 100%;
+  margin: 14px 0 10px;
+  padding: 10px 10px 12px;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.25);
+}
+
+#ui-bar .needs-panel-title {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
 #ui-bar .needs-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px 10px;
+  gap: 10px 10px;
   width: 100%;
-  margin: 14px 0 10px;
+  margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
@@ -206,11 +227,14 @@ body {
   box-sizing: border-box;
 }
 
+/* Шкала настроения — внизу панели, на всю ширину */
 #ui-bar .need-item--mood {
+  grid-column: 1 / -1;
   display: block;
   width: 100%;
-  margin: 14px 0;
-  padding: 0;
+  margin: 12px 0 0;
+  padding: 10px 0 0;
+  border-top: 1px solid rgba(52, 60, 103, 0.7);
   box-sizing: border-box;
 }
 
@@ -636,6 +660,18 @@ window.getNeedColor = function(value) {
   else if (value < 70) return "#76b96b";  // зеленоватый
   else if (value < 90) return "#4fa36b";  // зелёный
   return "#39c878";                       // ярко-зелёный
+};
+
+// Иконка настроения в зависимости от уровня
+window.getMoodIcon = function(value) {
+  value = Number(value) || 0;
+  if (value < 15) return "😭";        // ужасно
+  if (value < 30) return "😞";        // плохо
+  if (value < 45) return "😕";        // не очень
+  if (value < 60) return "😐";        // нейтрально
+  if (value < 75) return "🙂";        // нормально
+  if (value < 90) return "😊";        // хорошо
+  return "😄";                         // отлично
 };</script><tw-tag name="widget" color="purple"></tw-tag><tw-passagedata pid="1" name="StoryTitle" tags="" position="725,350" size="100,100">LifeSim</tw-passagedata><tw-passagedata pid="2" name="StoryAuthor" tags="" position="700,525" size="100,100">Starhead</tw-passagedata><tw-passagedata pid="3" name="StoryInit" tags="" position="575,525" size="100,100">&lt;&lt;set $game = {
   location: &quot;home&quot;,
   room: &quot;living_room&quot;,
@@ -691,82 +727,85 @@ window.getNeedColor = function(value) {
     💵 &lt;&lt;= $game.player.money &gt;&gt;
   &lt;/div&gt;
 
-  &lt;div class=&quot;needs-grid&quot;&gt;
-    &lt;div class=&quot;need-item&quot;&gt;
-      &lt;div class=&quot;need-header&quot;&gt;
-        &lt;span class=&quot;need-icon&quot;&gt;⚡&lt;/span&gt;
-        &lt;span class=&quot;need-name&quot;&gt;Энергия&lt;/span&gt;
-        &lt;span class=&quot;need-value&quot;&gt;&lt;&lt;= $game.player.needs.energy.toFixed(1) &gt;&gt;&lt;/span&gt;
+  &lt;div class="needs-panel"&gt;
+    &lt;div class="needs-panel-title"&gt;Потребности&lt;/div&gt;
+    &lt;div class="needs-grid"&gt;
+      &lt;div class="need-item"&gt;
+        &lt;div class="need-header"&gt;
+          &lt;span class="need-icon"&gt;⚡&lt;/span&gt;
+          &lt;span class="need-name"&gt;Энергия&lt;/span&gt;
+          &lt;span class="need-value"&gt;&lt;&lt;= $game.player.needs.energy.toFixed(1) &gt;&gt;&lt;/span&gt;
+        &lt;/div&gt;
+        &lt;div class="need-bar"&gt;
+          &lt;div class="need-fill need-&lt;&lt;= window.getNeedLevel($game.player.needs.energy) &gt;&gt;" style="width: &lt;&lt;= $game.player.needs.energy &gt;&gt;%;"&gt;&lt;/div&gt;
+        &lt;/div&gt;
       &lt;/div&gt;
-      &lt;div class=&quot;need-bar&quot;&gt;
-        &lt;div class=&quot;need-fill need-excellent&quot; style=&quot;width: &lt;&lt;= $game.player.needs.energy &gt;&gt;%;&quot;&gt;&lt;/div&gt;
-      &lt;/div&gt;
-    &lt;/div&gt;
 
-    &lt;div class=&quot;need-item&quot;&gt;
-      &lt;div class=&quot;need-header&quot;&gt;
-        &lt;span class=&quot;need-icon&quot;&gt;🍔&lt;/span&gt;
-        &lt;span class=&quot;need-name&quot;&gt;Сытость&lt;/span&gt;
-        &lt;span class=&quot;need-value&quot;&gt;&lt;&lt;= $game.player.needs.satiety.toFixed(1) &gt;&gt;&lt;/span&gt;
+      &lt;div class="need-item"&gt;
+        &lt;div class="need-header"&gt;
+          &lt;span class="need-icon"&gt;🍔&lt;/span&gt;
+          &lt;span class="need-name"&gt;Сытость&lt;/span&gt;
+          &lt;span class="need-value"&gt;&lt;&lt;= $game.player.needs.satiety.toFixed(1) &gt;&gt;&lt;/span&gt;
+        &lt;/div&gt;
+        &lt;div class="need-bar"&gt;
+          &lt;div class="need-fill need-&lt;&lt;= window.getNeedLevel($game.player.needs.satiety) &gt;&gt;" style="width: &lt;&lt;= $game.player.needs.satiety &gt;&gt;%;"&gt;&lt;/div&gt;
+        &lt;/div&gt;
       &lt;/div&gt;
-      &lt;div class=&quot;need-bar&quot;&gt;
-        &lt;div class=&quot;need-fill need-excellent&quot; style=&quot;width: &lt;&lt;= $game.player.needs.satiety &gt;&gt;%;&quot;&gt;&lt;/div&gt;
-      &lt;/div&gt;
-    &lt;/div&gt;
 
-    &lt;div class=&quot;need-item&quot;&gt;
-      &lt;div class=&quot;need-header&quot;&gt;
-        &lt;span class=&quot;need-icon&quot;&gt;🚿&lt;/span&gt;
-        &lt;span class=&quot;need-name&quot;&gt;Гигиена&lt;/span&gt;
-        &lt;span class=&quot;need-value&quot;&gt;&lt;&lt;= $game.player.needs.hygiene.toFixed(1) &gt;&gt;&lt;/span&gt;
+      &lt;div class="need-item"&gt;
+        &lt;div class="need-header"&gt;
+          &lt;span class="need-icon"&gt;🚿&lt;/span&gt;
+          &lt;span class="need-name"&gt;Гигиена&lt;/span&gt;
+          &lt;span class="need-value"&gt;&lt;&lt;= $game.player.needs.hygiene.toFixed(1) &gt;&gt;&lt;/span&gt;
+        &lt;/div&gt;
+        &lt;div class="need-bar"&gt;
+          &lt;div class="need-fill need-&lt;&lt;= window.getNeedLevel($game.player.needs.hygiene) &gt;&gt;" style="width: &lt;&lt;= $game.player.needs.hygiene &gt;&gt;%;"&gt;&lt;/div&gt;
+        &lt;/div&gt;
       &lt;/div&gt;
-      &lt;div class=&quot;need-bar&quot;&gt;
-        &lt;div class=&quot;need-fill need-excellent&quot; style=&quot;width: &lt;&lt;= $game.player.needs.hygiene &gt;&gt;%;&quot;&gt;&lt;/div&gt;
-      &lt;/div&gt;
-    &lt;/div&gt;
 
-    &lt;div class=&quot;need-item&quot;&gt;
-      &lt;div class=&quot;need-header&quot;&gt;
-        &lt;span class=&quot;need-icon&quot;&gt;💬&lt;/span&gt;
-        &lt;span class=&quot;need-name&quot;&gt;Общение&lt;/span&gt;
-        &lt;span class=&quot;need-value&quot;&gt;&lt;&lt;= $game.player.needs.social.toFixed(1) &gt;&gt;&lt;/span&gt;
+      &lt;div class="need-item"&gt;
+        &lt;div class="need-header"&gt;
+          &lt;span class="need-icon"&gt;💬&lt;/span&gt;
+          &lt;span class="need-name"&gt;Общение&lt;/span&gt;
+          &lt;span class="need-value"&gt;&lt;&lt;= $game.player.needs.social.toFixed(1) &gt;&gt;&lt;/span&gt;
+        &lt;/div&gt;
+        &lt;div class="need-bar"&gt;
+          &lt;div class="need-fill need-&lt;&lt;= window.getNeedLevel($game.player.needs.social) &gt;&gt;" style="width: &lt;&lt;= $game.player.needs.social &gt;&gt;%;"&gt;&lt;/div&gt;
+        &lt;/div&gt;
       &lt;/div&gt;
-      &lt;div class=&quot;need-bar&quot;&gt;
-        &lt;div class=&quot;need-fill need-excellent&quot; style=&quot;width: &lt;&lt;= $game.player.needs.social &gt;&gt;%;&quot;&gt;&lt;/div&gt;
-      &lt;/div&gt;
-    &lt;/div&gt;
 
-    &lt;div class=&quot;need-item&quot;&gt;
-      &lt;div class=&quot;need-header&quot;&gt;
-        &lt;span class=&quot;need-icon&quot;&gt;🎮&lt;/span&gt;
-        &lt;span class=&quot;need-name&quot;&gt;Досуг&lt;/span&gt;
-        &lt;span class=&quot;need-value&quot;&gt;&lt;&lt;= $game.player.needs.fun.toFixed(1) &gt;&gt;&lt;/span&gt;
+      &lt;div class="need-item"&gt;
+        &lt;div class="need-header"&gt;
+          &lt;span class="need-icon"&gt;🎮&lt;/span&gt;
+          &lt;span class="need-name"&gt;Досуг&lt;/span&gt;
+          &lt;span class="need-value"&gt;&lt;&lt;= $game.player.needs.fun.toFixed(1) &gt;&gt;&lt;/span&gt;
+        &lt;/div&gt;
+        &lt;div class="need-bar"&gt;
+          &lt;div class="need-fill need-&lt;&lt;= window.getNeedLevel($game.player.needs.fun) &gt;&gt;" style="width: &lt;&lt;= $game.player.needs.fun &gt;&gt;%;"&gt;&lt;/div&gt;
+        &lt;/div&gt;
       &lt;/div&gt;
-      &lt;div class=&quot;need-bar&quot;&gt;
-        &lt;div class=&quot;need-fill need-excellent&quot; style=&quot;width: &lt;&lt;= $game.player.needs.fun &gt;&gt;%;&quot;&gt;&lt;/div&gt;
-      &lt;/div&gt;
-    &lt;/div&gt;
 
-    &lt;div class=&quot;need-item&quot;&gt;
-      &lt;div class=&quot;need-header&quot;&gt;
-        &lt;span class=&quot;need-icon&quot;&gt;🚽&lt;/span&gt;
-        &lt;span class=&quot;need-name&quot;&gt;Нужда&lt;/span&gt;
-        &lt;span class=&quot;need-value&quot;&gt;&lt;&lt;= $game.player.needs.bladder.toFixed(1) &gt;&gt;&lt;/span&gt;
+      &lt;div class="need-item"&gt;
+        &lt;div class="need-header"&gt;
+          &lt;span class="need-icon"&gt;🚽&lt;/span&gt;
+          &lt;span class="need-name"&gt;Нужда&lt;/span&gt;
+          &lt;span class="need-value"&gt;&lt;&lt;= $game.player.needs.bladder.toFixed(1) &gt;&gt;&lt;/span&gt;
+        &lt;/div&gt;
+        &lt;div class="need-bar"&gt;
+          &lt;div class="need-fill need-&lt;&lt;= window.getNeedLevel($game.player.needs.bladder) &gt;&gt;" style="width: &lt;&lt;= $game.player.needs.bladder &gt;&gt;%;"&gt;&lt;/div&gt;
+        &lt;/div&gt;
       &lt;/div&gt;
-      &lt;div class=&quot;need-bar&quot;&gt;
-        &lt;div class=&quot;need-fill need-excellent&quot; style=&quot;width: &lt;&lt;= $game.player.needs.bladder &gt;&gt;%;&quot;&gt;&lt;/div&gt;
-      &lt;/div&gt;
-    &lt;/div&gt;
-  &lt;/div&gt;
 
-  &lt;div class=&quot;need-item need-item--mood&quot;&gt;
-    &lt;div class=&quot;need-header&quot;&gt;
-      &lt;span class=&quot;need-icon&quot;&gt;😊&lt;/span&gt;
-      &lt;span class=&quot;need-name&quot;&gt;Настроение&lt;/span&gt;
-      &lt;span class=&quot;need-value&quot;&gt;&lt;&lt;= $game.player.needs.mood.toFixed(1) &gt;&gt;&lt;/span&gt;
-    &lt;/div&gt;
-    &lt;div class=&quot;need-bar&quot;&gt;
-      &lt;div class=&quot;need-fill need-excellent&quot; style=&quot;width: &lt;&lt;= $game.player.needs.mood &gt;&gt;%;&quot;&gt;&lt;/div&gt;
+      &lt;div class="need-item need-item--mood"&gt;
+        &lt;div class="need-header"&gt;
+          &lt;span class="need-icon"&gt;&lt;&lt;= window.getMoodIcon($game.player.needs.mood) &gt;&gt;&lt;/span&gt;
+          &lt;span class="need-name"&gt;Настроение&lt;/span&gt;
+          &lt;span class="need-value"&gt;&lt;&lt;= $game.player.needs.mood.toFixed(1) &gt;&gt;&lt;/span&gt;
+        &lt;/div&gt;
+        &lt;div class="need-bar"&gt;
+          &lt;div class="need-fill need-&lt;&lt;= window.getNeedLevel($game.player.needs.mood) &gt;&gt;" style="width: &lt;&lt;= $game.player.needs.mood &gt;&gt;%;"&gt;&lt;/div&gt;
+        &lt;/div&gt;
+      &lt;/div&gt;
     &lt;/div&gt;
   &lt;/div&gt;
 
