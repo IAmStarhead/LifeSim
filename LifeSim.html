@@ -672,6 +672,42 @@ window.getMoodIcon = function(value) {
   if (value < 75) return "🙂";        // нормально
   if (value < 90) return "😊";        // хорошо
   return "😄";                         // отлично
+};
+
+// Рендер одной шкалы потребности (готовый HTML — макросы внутри тегов SugarCube не вычисляет)
+window.renderNeedBar = function(icon, name, value, extraClass) {
+  value = Number(value) || 0;
+  var level = window.getNeedLevel(value);
+  var cls = "need-item" + (extraClass ? " " + extraClass : "");
+  return ""
+    + "<div class=\"" + cls + "\">"
+    +   "<div class=\"need-header\">"
+    +     "<span class=\"need-icon\">" + icon + "</span>"
+    +     "<span class=\"need-name\">" + name + "</span>"
+    +     "<span class=\"need-value\">" + value.toFixed(1) + "</span>"
+    +   "</div>"
+    +   "<div class=\"need-bar\">"
+    +     "<div class=\"need-fill need-" + level + "\" style=\"width:" + value + "%;\"></div>"
+    +   "</div>"
+    + "</div>";
+};
+
+// Рендер всей панели потребностей (сетка 2 колонки + настроение внизу)
+window.renderNeedsPanel = function() {
+  var n = State.variables.game.player.needs;
+  return ""
+    + "<div class=\"needs-panel\">"
+    +   "<div class=\"needs-panel-title\">Потребности</div>"
+    +   "<div class=\"needs-grid\">"
+    +     window.renderNeedBar("⚡", "Энергия",   n.energy)
+    +     window.renderNeedBar("🍔", "Сытость",   n.satiety)
+    +     window.renderNeedBar("🚿", "Гигиена",   n.hygiene)
+    +     window.renderNeedBar("💬", "Общение",   n.social)
+    +     window.renderNeedBar("🎮", "Досуг",     n.fun)
+    +     window.renderNeedBar("🚽", "Нужда",     n.bladder)
+    +     window.renderNeedBar(window.getMoodIcon(n.mood), "Настроение", n.mood, "need-item--mood")
+    +   "</div>"
+    + "</div>";
 };</script><tw-tag name="widget" color="purple"></tw-tag><tw-passagedata pid="1" name="StoryTitle" tags="" position="725,350" size="100,100">LifeSim</tw-passagedata><tw-passagedata pid="2" name="StoryAuthor" tags="" position="700,525" size="100,100">Starhead</tw-passagedata><tw-passagedata pid="3" name="StoryInit" tags="" position="575,525" size="100,100">&lt;&lt;set $game = {
   location: &quot;home&quot;,
   room: &quot;living_room&quot;,
@@ -715,116 +751,39 @@ window.getMoodIcon = function(value) {
     history: []
   },
   settings: {}
-}&gt;&gt;</tw-passagedata><tw-passagedata pid="4" name="Start" tags="" position="700,650" size="100,100">&lt;&lt;goto &quot;Main&quot;&gt;&gt;</tw-passagedata><tw-passagedata pid="5" name="StoryCaption" tags="" position="825,650" size="100,100">&lt;div class=&quot;sidebar-content&quot;&gt;
-  &lt;div class=&quot;logo&quot;&gt;LifeSim&lt;/div&gt;
-  &lt;div class=&quot;datetime&quot;&gt;
-    &lt;span class=&quot;time-emoji&quot;&gt;☀️&lt;/span&gt;
+}&gt;&gt;</tw-passagedata><tw-passagedata pid="4" name="Start" tags="" position="700,650" size="100,100">&lt;&lt;goto &quot;Main&quot;&gt;&gt;</tw-passagedata><tw-passagedata pid="5" name="StoryCaption" tags="" position="825,650" size="100,100">&lt;&lt;nobr&gt;&gt;
+&lt;div class="sidebar-content"&gt;
+  &lt;div class="logo"&gt;LifeSim&lt;/div&gt;
+  &lt;div class="datetime"&gt;
+    &lt;span class="time-emoji"&gt;☀️&lt;/span&gt;
     &lt;span&gt;
       День &lt;&lt;= $game.time.day &gt;&gt;, &lt;&lt;= $game.time.weekday &gt;&gt;, &lt;&lt;= window.formatTime() &gt;&gt;
     &lt;/span&gt;
   &lt;/div&gt;
-  &lt;div class=&quot;money&quot;&gt;
+  &lt;div class="money"&gt;
     💵 &lt;&lt;= $game.player.money &gt;&gt;
   &lt;/div&gt;
 
-  &lt;div class="needs-panel"&gt;
-    &lt;div class="needs-panel-title"&gt;Потребности&lt;/div&gt;
-    &lt;div class="needs-grid"&gt;
-      &lt;div class="need-item"&gt;
-        &lt;div class="need-header"&gt;
-          &lt;span class="need-icon"&gt;⚡&lt;/span&gt;
-          &lt;span class="need-name"&gt;Энергия&lt;/span&gt;
-          &lt;span class="need-value"&gt;&lt;&lt;= $game.player.needs.energy.toFixed(1) &gt;&gt;&lt;/span&gt;
-        &lt;/div&gt;
-        &lt;div class="need-bar"&gt;
-          &lt;div class="need-fill need-&lt;&lt;= window.getNeedLevel($game.player.needs.energy) &gt;&gt;" style="width: &lt;&lt;= $game.player.needs.energy &gt;&gt;%;"&gt;&lt;/div&gt;
-        &lt;/div&gt;
-      &lt;/div&gt;
+  &lt;&lt;print window.renderNeedsPanel()&gt;&gt;
 
-      &lt;div class="need-item"&gt;
-        &lt;div class="need-header"&gt;
-          &lt;span class="need-icon"&gt;🍔&lt;/span&gt;
-          &lt;span class="need-name"&gt;Сытость&lt;/span&gt;
-          &lt;span class="need-value"&gt;&lt;&lt;= $game.player.needs.satiety.toFixed(1) &gt;&gt;&lt;/span&gt;
-        &lt;/div&gt;
-        &lt;div class="need-bar"&gt;
-          &lt;div class="need-fill need-&lt;&lt;= window.getNeedLevel($game.player.needs.satiety) &gt;&gt;" style="width: &lt;&lt;= $game.player.needs.satiety &gt;&gt;%;"&gt;&lt;/div&gt;
-        &lt;/div&gt;
-      &lt;/div&gt;
-
-      &lt;div class="need-item"&gt;
-        &lt;div class="need-header"&gt;
-          &lt;span class="need-icon"&gt;🚿&lt;/span&gt;
-          &lt;span class="need-name"&gt;Гигиена&lt;/span&gt;
-          &lt;span class="need-value"&gt;&lt;&lt;= $game.player.needs.hygiene.toFixed(1) &gt;&gt;&lt;/span&gt;
-        &lt;/div&gt;
-        &lt;div class="need-bar"&gt;
-          &lt;div class="need-fill need-&lt;&lt;= window.getNeedLevel($game.player.needs.hygiene) &gt;&gt;" style="width: &lt;&lt;= $game.player.needs.hygiene &gt;&gt;%;"&gt;&lt;/div&gt;
-        &lt;/div&gt;
-      &lt;/div&gt;
-
-      &lt;div class="need-item"&gt;
-        &lt;div class="need-header"&gt;
-          &lt;span class="need-icon"&gt;💬&lt;/span&gt;
-          &lt;span class="need-name"&gt;Общение&lt;/span&gt;
-          &lt;span class="need-value"&gt;&lt;&lt;= $game.player.needs.social.toFixed(1) &gt;&gt;&lt;/span&gt;
-        &lt;/div&gt;
-        &lt;div class="need-bar"&gt;
-          &lt;div class="need-fill need-&lt;&lt;= window.getNeedLevel($game.player.needs.social) &gt;&gt;" style="width: &lt;&lt;= $game.player.needs.social &gt;&gt;%;"&gt;&lt;/div&gt;
-        &lt;/div&gt;
-      &lt;/div&gt;
-
-      &lt;div class="need-item"&gt;
-        &lt;div class="need-header"&gt;
-          &lt;span class="need-icon"&gt;🎮&lt;/span&gt;
-          &lt;span class="need-name"&gt;Досуг&lt;/span&gt;
-          &lt;span class="need-value"&gt;&lt;&lt;= $game.player.needs.fun.toFixed(1) &gt;&gt;&lt;/span&gt;
-        &lt;/div&gt;
-        &lt;div class="need-bar"&gt;
-          &lt;div class="need-fill need-&lt;&lt;= window.getNeedLevel($game.player.needs.fun) &gt;&gt;" style="width: &lt;&lt;= $game.player.needs.fun &gt;&gt;%;"&gt;&lt;/div&gt;
-        &lt;/div&gt;
-      &lt;/div&gt;
-
-      &lt;div class="need-item"&gt;
-        &lt;div class="need-header"&gt;
-          &lt;span class="need-icon"&gt;🚽&lt;/span&gt;
-          &lt;span class="need-name"&gt;Нужда&lt;/span&gt;
-          &lt;span class="need-value"&gt;&lt;&lt;= $game.player.needs.bladder.toFixed(1) &gt;&gt;&lt;/span&gt;
-        &lt;/div&gt;
-        &lt;div class="need-bar"&gt;
-          &lt;div class="need-fill need-&lt;&lt;= window.getNeedLevel($game.player.needs.bladder) &gt;&gt;" style="width: &lt;&lt;= $game.player.needs.bladder &gt;&gt;%;"&gt;&lt;/div&gt;
-        &lt;/div&gt;
-      &lt;/div&gt;
-
-      &lt;div class="need-item need-item--mood"&gt;
-        &lt;div class="need-header"&gt;
-          &lt;span class="need-icon"&gt;&lt;&lt;= window.getMoodIcon($game.player.needs.mood) &gt;&gt;&lt;/span&gt;
-          &lt;span class="need-name"&gt;Настроение&lt;/span&gt;
-          &lt;span class="need-value"&gt;&lt;&lt;= $game.player.needs.mood.toFixed(1) &gt;&gt;&lt;/span&gt;
-        &lt;/div&gt;
-        &lt;div class="need-bar"&gt;
-          &lt;div class="need-fill need-&lt;&lt;= window.getNeedLevel($game.player.needs.mood) &gt;&gt;" style="width: &lt;&lt;= $game.player.needs.mood &gt;&gt;%;"&gt;&lt;/div&gt;
-        &lt;/div&gt;
-      &lt;/div&gt;
-    &lt;/div&gt;
+  &lt;div class="menu-buttons"&gt;
+    &lt;&lt;button "СТАТИСТИКА"&gt;&gt;&lt;&lt;run alert("Статистика")&gt;&gt;&lt;&lt;/button&gt;&gt;
+    &lt;&lt;button "ИНВЕНТАРЬ"&gt;&gt;&lt;&lt;run alert("Инвентарь")&gt;&gt;&lt;&lt;/button&gt;&gt;
+    &lt;&lt;button "ТЕЛЕФОН"&gt;&gt;&lt;&lt;run alert("Телефон")&gt;&gt;&lt;&lt;/button&gt;&gt;
+    &lt;&lt;button "КАРТА"&gt;&gt;&lt;&lt;run alert("Карта")&gt;&gt;&lt;&lt;/button&gt;&gt;
+    &lt;&lt;button "КТО РЯДОМ"&gt;&gt;&lt;&lt;run alert("Кто рядом")&gt;&gt;&lt;&lt;/button&gt;&gt;
+    &lt;&lt;button "КВЕСТЫ"&gt;&gt;&lt;&lt;run alert("Квесты")&gt;&gt;&lt;&lt;/button&gt;&gt;
+    &lt;&lt;button "ЧИТЫ"&gt;&gt;&lt;&lt;run alert("Читы")&gt;&gt;&lt;&lt;/button&gt;&gt;
+    &lt;&lt;button "НАСТРОЙКИ"&gt;&gt;&lt;&lt;run alert("Настройки")&gt;&gt;&lt;&lt;/button&gt;&gt;
   &lt;/div&gt;
 
-  &lt;div class=&quot;menu-buttons&quot;&gt;
-    &lt;&lt;button &quot;СТАТИСТИКА&quot;&gt;&gt;&lt;&lt;run alert(&quot;Статистика&quot;)&gt;&gt;&lt;&lt;/button&gt;&gt;
-    &lt;&lt;button &quot;ИНВЕНТАРЬ&quot;&gt;&gt;&lt;&lt;run alert(&quot;Инвентарь&quot;)&gt;&gt;&lt;&lt;/button&gt;&gt;
-    &lt;&lt;button &quot;ТЕЛЕФОН&quot;&gt;&gt;&lt;&lt;run alert(&quot;Телефон&quot;)&gt;&gt;&lt;&lt;/button&gt;&gt;
-    &lt;&lt;button &quot;КАРТА&quot;&gt;&gt;&lt;&lt;run alert(&quot;Карта&quot;)&gt;&gt;&lt;&lt;/button&gt;&gt;
-    &lt;&lt;button &quot;КТО РЯДОМ&quot;&gt;&gt;&lt;&lt;run alert(&quot;Кто рядом&quot;)&gt;&gt;&lt;&lt;/button&gt;&gt;
-    &lt;&lt;button &quot;КВЕСТЫ&quot;&gt;&gt;&lt;&lt;run alert(&quot;Квесты&quot;)&gt;&gt;&lt;&lt;/button&gt;&gt;
-    &lt;&lt;button &quot;ЧИТЫ&quot;&gt;&gt;&lt;&lt;run alert(&quot;Читы&quot;)&gt;&gt;&lt;&lt;/button&gt;&gt;
-    &lt;&lt;button &quot;НАСТРОЙКИ&quot;&gt;&gt;&lt;&lt;run alert(&quot;Настройки&quot;)&gt;&gt;&lt;&lt;/button&gt;&gt;
+  &lt;div class="sidebar-footer"&gt;
+    &lt;&lt;button "🔄 Рестарт"&gt;&gt;&lt;&lt;run UI.restart()&gt;&gt;&lt;&lt;/button&gt;&gt;
+    &lt;&lt;button "❓ FAQ"&gt;&gt;&lt;&lt;run alert("FAQ")&gt;&gt;&lt;&lt;/button&gt;&gt;
   &lt;/div&gt;
-
-  &lt;div class=&quot;sidebar-footer&quot;&gt;
-    &lt;&lt;button &quot;🔄 Рестарт&quot;&gt;&gt;&lt;&lt;run UI.restart()&gt;&gt;&lt;&lt;/button&gt;&gt;
-    &lt;&lt;button &quot;❓ FAQ&quot;&gt;&gt;&lt;&lt;run alert(&quot;FAQ&quot;)&gt;&gt;&lt;&lt;/button&gt;&gt;
-  &lt;/div&gt;
-&lt;/div&gt;</tw-passagedata><tw-passagedata pid="6" name="Home" tags="" position="825,500" size="100,100">&lt;&lt;nobr&gt;&gt;
+&lt;/div&gt;
+&lt;&lt;/nobr&gt;&gt;
+</tw-passagedata><tw-passagedata pid="6" name="Home" tags="" position="825,500" size="100,100">&lt;&lt;nobr&gt;&gt;
 &lt;&lt;set _roomData = window.getRoomData($game.room)&gt;&gt;
 &lt;div class=&quot;location-header&quot;&gt;
   &lt;h1 class=&quot;location-title&quot;&gt;&lt;&lt;= _roomData.name &gt;&gt;&lt;/h1&gt;
