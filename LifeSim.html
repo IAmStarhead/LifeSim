@@ -104,42 +104,110 @@ var LZString=function(){var r=String.fromCharCode,o="ABCDEFGHIJKLMNOPQRSTUVWXYZa
 		<div id="init-lacking"><p>Browser lacks capabilities required to play.</p><p>Upgrade or switch to another browser.</p></div>
 		<div id="init-loading"><div>Loading&hellip;</div></div>
 	</div>
-	<tw-storydata name="LifeSim" startnode="4" creator="Twine" creator-version="2.12.0" format="SugarCube" format-version="2.37.3" ifid="74707ED3-D278-45B3-88BD-E1DEF324DFA5" options="" tags="" zoom="1" hidden><style role="stylesheet" id="twine-user-stylesheet" type="text/twine-css">/* ===== ОТЛАДОЧНЫЙ СТИЛЬ v3: цвета темы убраны, фон светлый ===== */
+	<tw-storydata name="LifeSim" startnode="4" creator="Twine" creator-version="2.12.0" format="SugarCube" format-version="2.37.3" ifid="74707ED3-D278-45B3-88BD-E1DEF324DFA5" options="" tags="" zoom="1" hidden><style role="stylesheet" id="twine-user-stylesheet" type="text/twine-css">:root {
+  --bg-deep: #090b1a;
+  --bg-main: #10142b;
+  --bg-panel: #151a33;
+  --bg-panel-hover: #1d2445;
+  --border: #343c67;
+  --border-hover: #6674b8;
+  --text-main: #f2f4ff;
+  --text-secondary: #aeb6d6;
+  --text-muted: #747d9f;
+  --accent: #8ea2ff;
+  --accent-soft: #c5ccff;
+  --gold: #f0c96a;
+}
+
 body {
-  background: #ffffff;
-  color: #000000;
+  background-color: var(--bg-deep);
+  color: var(--text-main);
   font-family: "Segoe UI", Roboto, Arial, sans-serif;
   margin: 0;
   padding: 0;
 }
 
-#passages { max-width: 1000px; margin: 0 auto; padding: 20px 24px 40px; }
+#passages {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 20px 24px 40px;
+}
 
-/* ----- Сайдбар: только компоновка, без цвета ----- */
-#ui-bar { width: 280px; border-right: 1px solid #cccccc; }
-#ui-bar .sidebar-content { padding: 12px; }
-.logo { font-size: 27px; font-weight: 700; margin-bottom: 8px; }
-.datetime, .money { font-size: 13px; margin-bottom: 6px; }
+#story {
+  margin: 0;
+  min-height: 0;
+  height: auto;
+}
 
-/* ----- Панель потребностей: одна рамка ----- */
+.passage {
+  animation: fadeIn 0.35s ease;
+  height: auto;
+  min-height: 0;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Боковая панель */
+#ui-bar {
+  background: linear-gradient(
+    180deg,
+    rgba(21, 26, 51, 0.96),
+    rgba(10, 13, 30, 0.98)
+  );
+  border-right: 1px solid var(--border);
+  box-shadow: 8px 0 30px rgba(0, 0, 0, 0.25);
+  width: 280px;
+}
+
+#ui-bar .sidebar-content {
+  padding: 12px;
+}
+
+.logo {
+  font-size: 27px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+  text-shadow: 0 0 10px rgba(142, 162, 255, 0.2);
+}
+
+.datetime,
+.money {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.money {
+  color: var(--gold);
+}
+
+/* ПОТРЕБНОСТИ — панель в одной рамке */
 #ui-bar .needs-panel {
   width: 100%;
   margin: 14px 0 10px;
   padding: 10px 10px 12px;
   box-sizing: border-box;
-  border: 2px solid #000000;   /* чёрная рамка для наглядности теста */
-  border-radius: 6px;
-  background: #f4f4f4;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.25);
 }
+
 #ui-bar .needs-panel-title {
   margin: 0 0 8px;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.8px;
   text-align: center;
-  color: #000000;
+  color: var(--text-muted);
 }
+
 #ui-bar .needs-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -149,81 +217,322 @@ body {
   padding: 0;
   box-sizing: border-box;
 }
-#ui-bar .need-item { display: block; width: 100%; min-width: 0; margin: 0; padding: 0; box-sizing: border-box; }
+
+#ui-bar .need-item {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Шкала настроения — внизу панели, на всю ширину */
 #ui-bar .need-item--mood {
   grid-column: 1 / -1;
+  display: block;
   width: 100%;
   margin: 12px 0 0;
   padding: 10px 0 0;
-  border-top: 1px solid #999999;
+  border-top: 1px solid rgba(52, 60, 103, 0.7);
   box-sizing: border-box;
 }
+
 #ui-bar .need-header {
   display: flex;
   align-items: center;
   width: 100%;
   margin: 0 0 5px 0;
+  padding: 0;
   font-size: 12px;
   box-sizing: border-box;
 }
-#ui-bar .need-icon { flex: 0 0 18px; width: 18px; margin-right: 4px; font-size: 13px; text-align: center; }
-#ui-bar .need-name { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #333333; }
-#ui-bar .need-value { flex: 0 0 auto; margin-left: 4px; font-size: 10px; color: #555555; }
 
-/* Дорожка шкалы — серая, БЕЗ фонового цвета у заливки (цвет приходит инлайн из JS) */
+#ui-bar .need-icon {
+  flex: 0 0 18px;
+  width: 18px;
+  margin-right: 4px;
+  font-size: 13px;
+  text-align: center;
+}
+
+#ui-bar .need-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-secondary);
+}
+
+#ui-bar .need-value {
+  flex: 0 0 auto;
+  margin-left: 4px;
+  font-size: 10px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
 #ui-bar .need-bar {
   display: block;
   position: relative;
   width: 100%;
-  height: 10px;
+  height: 8px;
   overflow: hidden;
-  background-color: #dddddd;
-  border: 1px solid #999999;
+  background-color: #0d1020;
+  border: 1px solid #343c67;
   border-radius: 4px;
   box-sizing: border-box;
 }
+
 #ui-bar .need-fill {
   display: block;
   height: 100%;
+  min-height: 6px;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
   border-radius: 3px;
   transition: width 0.3s ease;
 }
 
-/* Кнопки — нейтральные */
+/* Цвета */
+#ui-bar .need-fill.need-critical {
+  background-color: #e05252;
+}
+
+#ui-bar .need-fill.need-low {
+  background-color: #e58b3c;
+}
+
+#ui-bar .need-fill.need-below-average {
+  background-color: #d9c84a;
+}
+
+#ui-bar .need-fill.need-average {
+  background-color: #a8c85a;
+}
+
+#ui-bar .need-fill.need-above-average {
+  background-color: #76b96b;
+}
+
+#ui-bar .need-fill.need-high {
+  background-color: #4fa36b;
+}
+
+#ui-bar .need-fill.need-excellent {
+  background-color: #39c878;
+}
+
+/* Кнопки меню */
+#ui-bar .menu-buttons {
+  margin-top: 4px;
+}
+
 #ui-bar .menu-buttons button,
 #ui-bar .sidebar-footer button {
+  box-sizing: border-box;
   display: block;
   width: 100%;
   margin: 0 0 5px;
   padding: 7px 9px;
   text-align: left;
-  background: #ffffff;
-  border: 1px solid #999999;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid var(--border);
   border-radius: 5px;
-  color: #000000;
+  color: var(--text-secondary);
   cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
 }
-#ui-bar .menu-buttons button:hover,
-#ui-bar .sidebar-footer button:hover { background: #e8e8e8; }
-.sidebar-footer { margin-top: 12px; padding-top: 10px; border-top: 1px solid #cccccc; }
 
-/* Действия/ссылки — простые, чтобы игра не ломалась */
-.actions-section .link-internal,
-.room-nav .link-internal,
-.cheats-section .link-internal {
-  display: inline-block;
-  margin: 4px 6px 4px 0;
-  padding: 5px 9px;
-  background: #ffffff;
-  border: 1px solid #999999;
-  border-radius: 5px;
-  color: #000000;
+#ui-bar .menu-buttons button:hover,
+#ui-bar .sidebar-footer button:hover {
+  background: var(--bg-panel-hover);
+  border-color: var(--border-hover);
+  color: var(--text-main);
+}
+
+.sidebar-footer {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+/* Заголовки локаций */
+.location-title {
+  font-size: 1.6em;
+  margin-bottom: 0.2em;
+  color: var(--accent);
+}
+
+.location-description {
+  margin-bottom: 0.8em;
+  color: var(--text-secondary);
+}
+
+.location-time {
+  margin-left: 0.5em;
+  color: var(--text-muted);
+}
+
+h2 {
+  font-size: 1.2em;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 3px;
+  margin-top: 1.2em;
+  margin-bottom: 0.6em;
+  color: var(--text-main);
+}
+
+/* Секции */
+.game-section {
+  margin-top: 20px;
+}
+
+.game-section:first-of-type {
+  margin-top: 10px;
+}
+
+/* Действия */
+.actions-list {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.actions-list .link-internal {
+  margin: 0;
+}
+
+.actions-section .link-internal {
+  display: block;
+  width: fit-content;
+  padding: 6px 10px;
+  background: rgba(21, 26, 51, 0.82);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-main);
+  text-decoration: none;
+  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+}
+
+.actions-section .link-internal:hover {
+  background: var(--bg-panel-hover);
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+/* Навигация по комнатам */
+.room-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.room-nav .link-internal {
+  margin: 0;
+  padding: 5px 8px;
+  font-size: 0.9em;
+  background: rgba(21, 26, 51, 0.82);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-main);
   text-decoration: none;
 }
-.actions-section .link-internal:hover,
-.room-nav .link-internal:hover { background: #e8e8e8; }
-h2 { font-size: 1.15em; border-bottom: 1px solid #cccccc; padding-bottom: 3px; }
-p:empty { display: none; }
+
+.room-nav .link-internal:hover {
+  background: var(--bg-panel-hover);
+  border-color: var(--accent);
+}
+
+/* Читы */
+.cheats-section {
+  opacity: 0.75;
+  margin-top: 30px;
+}
+
+.cheats-section .link-internal {
+  display: block;
+  width: fit-content;
+  margin: 4px 0;
+  padding: 5px 8px;
+  background: rgba(21, 26, 51, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-secondary);
+}
+
+/* Главное меню */
+.main-menu {
+  text-align: center;
+  margin-top: 30px;
+}
+
+.game-title {
+  font-size: 2.5em;
+  margin-bottom: 0.1em;
+  color: var(--accent);
+}
+
+.menu-subtitle {
+  font-size: 1.1em;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+}
+
+.main-menu .menu-buttons button {
+  display: block;
+  width: 250px;
+  margin: 0 auto 8px;
+  padding: 10px;
+  font-size: 1.1em;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-main);
+}
+
+/* Убираем лишние отступы */
+#story,
+#passages,
+.passage {
+  min-height: 0;
+  height: auto;
+}
+
+.location-header p,
+.actions-section p,
+.navigation-section p,
+.cheats-section p {
+  margin: 0;
+  padding: 0;
+}
+
+p:empty {
+  display: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* ===== Плавный переход: затемнение -> осветление при смене локации/действии ===== */
+#screen-fade {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  pointer-events: none;
+  background: #05060f;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.28s ease, visibility 0s linear 0.28s;
+}
+#screen-fade.fading {
+  opacity: 0.85;
+  visibility: visible;
+  transition: opacity 0.28s ease, visibility 0s;
+}
 </style><script role="script" id="twine-user-script" type="text/twine-javascript">window.advanceTime = function(minutes, ignoreNeeds) {
   var game = State.variables.game;
   if (!game || !game.time) return;
@@ -360,6 +669,43 @@ window.getRoomData = function(room) {
   return rooms[room] || { name: "Неизвестное место", description: "" };
 };
 
+// ===== Плавный переход экрана (затемнение -> осветление) =====
+window.setupFadeTransition = function() {
+  var overlay = document.getElementById("screen-fade");
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "screen-fade";
+    document.body.appendChild(overlay);
+  }
+  window.__fadeTimer = null;
+
+  var darken = function() {
+    if (window.__fadeTimer) { clearTimeout(window.__fadeTimer); window.__fadeTimer = null; }
+    overlay.classList.add("fading");
+  };
+  var lighten = function() {
+    overlay.classList.remove("fading");
+  };
+
+  // Затемнение при клике по переходу/действию/смене комнаты в игровой области
+  jQuery(document).on("click",
+    "#passages a.link-internal.macro-link, #passages button.macro-button",
+    function() {
+      darken();
+      // страховка: если переход не состоялся (открыт alert и т.п.) — вернуть яркость
+      window.__fadeTimer = setTimeout(lighten, 700);
+    }
+  );
+
+  // Осветление после того как новый пассаж показан
+  jQuery(document).on(":passagedisplay", function() {
+    if (window.__fadeTimer) { clearTimeout(window.__fadeTimer); window.__fadeTimer = null; }
+    setTimeout(lighten, 170);
+  });
+};
+jQuery(window).on("load", function() { setTimeout(window.setupFadeTransition, 50); });
+jQuery(function() { try { window.setupFadeTransition(); } catch (e) {} });
+
 window.getNeedColor = function(value) {
   value = Number(value) || 0;
   if (value < 10) return "#e05252";       // красный
@@ -407,7 +753,7 @@ window.renderNeedsPanel = function() {
   var n = State.variables.game.player.needs;
   return ""
     + "<div class=\"needs-panel\">"
-    +   "<div class=\"needs-panel-title\">Потребности v3</div>"
+    +   "<div class=\"needs-panel-title\">Потребности</div>"
     +   "<div class=\"needs-grid\">"
     +     window.renderNeedBar("⚡", "Энергия",   n.energy)
     +     window.renderNeedBar("🍔", "Сытость",   n.satiety)
