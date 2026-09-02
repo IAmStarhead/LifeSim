@@ -526,12 +526,12 @@ p:empty {
   background: #05060f;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.28s ease, visibility 0s linear 0.28s;
+  transition: opacity 0.18s ease, visibility 0s linear 0.18s;
 }
 #screen-fade.fading {
-  opacity: 0.85;
+  opacity: 0.55;
   visibility: visible;
-  transition: opacity 0.28s ease, visibility 0s;
+  transition: opacity 0.18s ease, visibility 0s;
 }
 </style><script role="script" id="twine-user-script" type="text/twine-javascript">window.advanceTime = function(minutes, ignoreNeeds) {
   var game = State.variables.game;
@@ -693,14 +693,14 @@ window.setupFadeTransition = function() {
     function() {
       darken();
       // страховка: если переход не состоялся (открыт alert и т.п.) — вернуть яркость
-      window.__fadeTimer = setTimeout(lighten, 700);
+      window.__fadeTimer = setTimeout(lighten, 500);
     }
   );
 
   // Осветление после того как новый пассаж показан
   jQuery(document).on(":passagedisplay", function() {
     if (window.__fadeTimer) { clearTimeout(window.__fadeTimer); window.__fadeTimer = null; }
-    setTimeout(lighten, 170);
+    setTimeout(lighten, 60);
   });
 };
 jQuery(window).on("load", function() { setTimeout(window.setupFadeTransition, 50); });
