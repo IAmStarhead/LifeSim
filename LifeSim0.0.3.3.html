@@ -1228,7 +1228,7 @@ window.renderTraits = function() {
 window.toggleFeature = function(name) {
   var f = State.variables.game.player.appearance.features;
   f[name] = !f[name];
-  try { Engine.play(Engine.passage ? Engine.passage() : "CharacterStep2"); } catch(e) {}
+  window.ccRefresh("CharacterStep2");
 };
 
 window.toggleTrait = function(id) {
@@ -1246,7 +1246,7 @@ window.toggleTrait = function(id) {
     }
     p.traits.push(id);
   }
-  try { Engine.play(Engine.passage ? Engine.passage() : "CharacterStep3"); } catch(e) {}
+  window.ccRefresh("CharacterStep3");
 };
 window.traitName = function(id) {
   var n = id;
@@ -1299,7 +1299,7 @@ window.renderHousing = function() {
 };
 window.chooseHousing = function(id) {
   State.variables.game.player.housing = id;
-  Engine.play("CharacterStep5");
+  window.ccRefresh("CharacterStep5");
 };
 
 window.getHousing = function(id) {
@@ -1347,20 +1347,27 @@ window.ccNotify = function(msg) {
   window.__ccNotifyT = setTimeout(function(){ n.classList.remove("cc-notify--show"); }, 2600);
 };
 
+// Безопасная перерисовка: откладываем на следующий тик, чтобы событие на нативном
+// элементе успело завершиться до уничтожения/пересоздания пассажа.
+window.ccRefresh = function(passage) {
+  var target = passage || (Engine.passage ? Engine.passage() : "CharacterStep2");
+  setTimeout(function(){ Engine.play(target); }, 0);
+};
+
 window.setCCField = function(key, val) {
   var a = State.variables.game.player.appearance;
   if (key === "hairLength") {
     a.hairLength = Number(val);
     var allowed = Object.keys(window.HAIRSTYLES_BY_LENGTH[a.hairLength] || {});
     if (allowed.indexOf(a.hairStyle) === -1) a.hairStyle = (a.hairLength === 1) ? "none" : (window.DEFAULT_HAIRSTYLE[a.hairLength] || allowed[0]);
-    Engine.play("CharacterStep2");
+    window.ccRefresh("CharacterStep2");
     return;
   }
-  if (key === "hairColor")   { a.hairColor = val;   Engine.play("CharacterStep2"); return; }
-  if (key === "hairTexture"){ a.hairTexture = val; Engine.play("CharacterStep2"); return; }
-  if (key === "hairStyle")   { a.hairStyle = val;   Engine.play("CharacterStep2"); return; }
+  if (key === "hairColor")   { a.hairColor = val;   window.ccRefresh("CharacterStep2"); return; }
+  if (key === "hairTexture"){ a.hairTexture = val; window.ccRefresh("CharacterStep2"); return; }
+  if (key === "hairStyle")   { a.hairStyle = val;   window.ccRefresh("CharacterStep2"); return; }
   a[key] = /^\d+$/.test(String(val)) ? Number(val) : val;
-  Engine.play(Engine.passage ? Engine.passage() : "CharacterStep2");
+  window.ccRefresh("CharacterStep2");
 };
 
 // Делегирование: один раз на документ (надёжнее inline onchange)
