@@ -3,15 +3,181 @@
 #============================================================================
 
 ПРОЩЕ ВСЕГО: Story -> Import from File -> LifeSim0.0.3.3.html (разрешить замену).
+Если обновляете вручную — замените три части, как описано ниже.
 
-НОВОЕ В 0.0.3.3: расширенная внешность (глаза, тип волос, причёски по длине, больше растительности, волосы на теле, форма носа/глаз/бровей/ушей, тумблеры веснушки/родинки/шрамы/тату/пирсинг), черты отсортированы по очкам и переименованы в 'Быстрообучаемый', жильё с понятным описанием и реальным отличием доступных комнат, исправлен предлог с/со в описании.
+ГЛАВНОЕ ИСПРАВЛЕНИЕ ЭТОЙ ВЕРСИИ (сброс списков волос):
+Выпадающие списки волос (длина / цвет / тип / причёска) переведены на РОДНЫЕ
+виджеты SugarCube <<listbox>>. Раньше использовались самодельные <select>, и
+Twine перерисовывал пассаж прямо в момент выбора — значение сбрасывалось.
+Теперь выбор надёжно сохраняется и НЕ сбрасывается, описание внешности
+обновляется сразу. Причёски по-прежнему зависят от длины; для «Лысый»
+цвет/тип/причёска скрыты. Достаточно заменить пассаж CharacterStep2
+(Часть 1) и Story JavaScript (Часть 2).
+
+НОВОЕ В 0.0.3.3: расширенная внешность (глаза, тип волос, причёски по длине,
+растительность на лице, волосы на теле, форма носа/глаз/бровей/ушей,
+тумблеры веснушки/родинки/шрамы/тату/пирсинг), черты отсортированы и переименованы,
+жильё с описанием и реально разными комнатами, dev-жильё «Богатый дом»,
+красная плашка-уведомление вместо alert.
 
 ==============================================================================
-СПЕЦ: Story JavaScript
+ЧАСТЬ 1. ПАССАЖ (узел) CharacterStep2
+КУДА: панель Passages -> открыть узел CharacterStep2 -> выделить весь текст
+      (Ctrl+A) и заменить целиком на блок ниже.
 ==============================================================================
-КУДА: Story -> Edit Story JavaScript (целиком)
-------------------------------------------------------------------------------
---- НАЧАЛО БЛОКА (копируйте всё ниже) ---
+--- НАЧАЛО ПАССАЖА CharacterStep2 (копируйте всё ниже) ---
+<<nobr>>
+<div class="character-creation">
+  <div class="cc-main-title">Создание персонажа</div>
+  <h1 class="cc-step-title">Шаг 2 — Внешность</h1>
+
+  <div class="cc-appearance-desc">
+    <<print window.getAppearanceDescription()>>
+  </div>
+
+  <div class="cc-blocks">
+    <div class="cc-block">
+      <h2>Телосложение</h2>
+      <div class="cc-select-row"><span class="cc-slider-label">Рост:</span>
+        <<listbox "$game.player.appearance.height" autoselect>>
+          <<option "Очень низкий" 1>><<option "Низкий" 2>><<option "Средний" 3>>
+          <<option "Высокий" 4>><<option "Очень высокий" 5>>
+        <</listbox>>
+      </div>
+      <div class="cc-select-row"><span class="cc-slider-label">Телосложение:</span>
+        <<listbox "$game.player.appearance.bodyType" autoselect>>
+          <<option "Очень худое" 1>><<option "Худое" 2>><<option "Среднее" 3>>
+          <<option "Плотное" 4>><<option "Полное" 5>>
+        <</listbox>>
+      </div>
+      <div class="cc-select-row"><span class="cc-slider-label">Мускулатура:</span>
+        <<listbox "$game.player.appearance.muscle" autoselect>>
+          <<option "Очень слабая" 1>><<option "Слабая" 2>><<option "Средняя" 3>>
+          <<option "Развитая" 4>><<option "Очень развитая" 5>>
+        <</listbox>>
+      </div>
+      <div class="cc-select-row"><span class="cc-slider-label">Тон кожи:</span>
+        <<listbox "$game.player.appearance.skinTone" autoselect>>
+          <<option "Очень светлая" 1>><<option "Светлая" 2>><<option "Средняя" 3>>
+          <<option "Смуглая" 4>><<option "Тёмная" 5>>
+        <</listbox>>
+      </div>
+      <div class="cc-select-row"><span class="cc-slider-label">Волосы на теле:</span>
+        <<listbox "$game.player.appearance.bodyHair" autoselect>>
+          <<option "Нет" 0>><<option "Редкие" 1>><<option "Средние" 2>><<option "Густые" 3>>
+        <</listbox>>
+      </div>
+    </div>
+
+    <div class="cc-block">
+      <h2>Лицо</h2>
+      <div class="cc-select-row"><span class="cc-slider-label">Форма лица:</span>
+        <<listbox "$game.player.appearance.faceShape" autoselect>>
+          <<option "Круглое" "round">><<option "Овальное" "oval">><<option "Обычное" "average">>
+          <<option "Квадратное" "square">><<option "Вытянутое" "long">>
+        <</listbox>>
+      </div>
+      <div class="cc-select-row"><span class="cc-slider-label">Цвет глаз:</span>
+        <<listbox "$game.player.appearance.eyeColor" autoselect>>
+          <<option "Карие" "brown">><<option "Голубые" "blue">><<option "Зелёные" "green">>
+          <<option "Серые" "gray">><<option "Ореховые" "hazel">><<option "Чёрные" "black">>
+          <<option "Янтарные" "amber">><<option "Фиолетовые" "violet">>
+          <<option "Розовые" "pink">><<option "Разные (гетерохромия)" "hetero">>
+        <</listbox>>
+      </div>
+      <div class="cc-select-row"><span class="cc-slider-label">Разрез глаз:</span>
+        <<listbox "$game.player.appearance.eyeShape" autoselect>>
+          <<option "Миндалевидные" "almond">><<option "Круглые" "round">><<option "С нависшим веком" "hooded">>
+          <<option "Узкие" "narrow">><<option "Широкие" "wide">>
+        <</listbox>>
+      </div>
+      <div class="cc-select-row"><span class="cc-slider-label">Форма носа:</span>
+        <<listbox "$game.player.appearance.noseShape" autoselect>>
+          <<option "Прямой" "straight">><<option "Курносый" "snub">><<option "С горбинкой" "aquiline">>
+          <<option "Широкий" "wide">><<option "Тонкий" "narrow">>
+        <</listbox>>
+      </div>
+      <div class="cc-select-row"><span class="cc-slider-label">Брови:</span>
+        <<listbox "$game.player.appearance.browShape" autoselect>>
+          <<option "Прямые" "straight">><<option "Изогнутые" "arched">>
+          <<option "Густые" "thick">><<option "Тонкие" "thin">>
+        <</listbox>>
+      </div>
+      <div class="cc-select-row"><span class="cc-slider-label">Уши:</span>
+        <<listbox "$game.player.appearance.earShape" autoselect>>
+          <<option "Обычные" "normal">><<option "Оттопыренные" "protruding">><<option "Прижатые" "close">>
+          <<option "Крупные" "large">><<option "Маленькие" "small">>
+        <</listbox>>
+      </div>
+    </div>
+
+    <div class="cc-block">
+      <h2>Волосы</h2>
+      <div class="cc-select-row"><span class="cc-slider-label">Длина:</span>
+        <<listbox "$game.player.appearance.hairLength" autoselect>>
+          <<option "Лысый" 1>><<option "Очень короткие" 2>><<option "Короткие" 3>>
+          <<option "Средние" 4>><<option "Длинные" 5>>
+        <</listbox>>
+      </div>
+      <<if $game.player.appearance.hairLength !== 1>>
+        <div class="cc-select-row"><span class="cc-slider-label">Цвет:</span>
+          <<listbox "$game.player.appearance.hairColor" autoselect>>
+            <<option "Чёрные" "black">><<option "Тёмные" "dark">><<option "Каштановые" "brown">>
+            <<option "Русые" "light_brown">><<option "Светлые" "blonde">><<option "Рыжие" "red">>
+            <<option "Седые" "gray">><<option "Розовые" "pink">><<option "Синие" "blue">>
+          <</listbox>>
+        </div>
+        <<if $game.player.appearance.hairLength >= 3>>
+          <div class="cc-select-row"><span class="cc-slider-label">Тип волос:</span>
+            <<listbox "$game.player.appearance.hairTexture" autoselect>>
+              <<option "Прямые" "straight">><<option "Волнистые" "wavy">><<option "Кудрявые" "curly">>
+            <</listbox>>
+          </div>
+        <</if>>
+        <div class="cc-select-row"><span class="cc-slider-label">Причёска:</span>
+          <<listbox "$game.player.appearance.hairStyle" autoselect>>
+            <<optionsfrom window.getHairStyleOptions()>>
+          <</listbox>>
+        </div>
+      <<else>>
+        <p class="cc-hint">Причёска и тип волос не выбираются — нет волос.</p>
+      <</if>>
+    </div>
+
+    <<if $game.player.gender == "муж">>
+    <div class="cc-block">
+      <h2>Растительность на лице</h2>
+      <div class="cc-select-row"><span class="cc-slider-label">Борода / усы:</span>
+        <<listbox "$game.player.appearance.facialHair" autoselect>>
+          <<option "Нет" "none">><<option "Лёгкая щетина" "light_stubble">><<option "Щетина" "stubble">>
+          <<option "Усы" "mustache">><<option "Козлиная бородка" "goatee">><<option "Короткая борода" "short_beard">>
+          <<option "Густая борода" "full_beard">><<option "Борода и усы" "beard_mustache">>
+        <</listbox>>
+      </div>
+    </div>
+    <</if>>
+
+    <div class="cc-block">
+      <h2>Особые приметы</h2>
+      <p class="cc-hint">Нажмите, чтобы включить или выключить.</p>
+      <<print window.renderFeaturesSection()>>
+    </div>
+  </div>
+
+  <p class="cc-hint">Описание обновляется при каждом изменении.</p>
+  <div class="cc-buttons">
+    <<link "← Назад">><<goto "CharacterCreation">><</link>>
+    <<link "Далее →">><<goto "CharacterStep3">><</link>>
+  </div>
+</div>
+<</nobr>>
+--- КОНЕЦ ПАССАЖА CharacterStep2 ---
+
+==============================================================================
+ЧАСТЬ 2. Story JavaScript
+КУДА: меню Story -> Edit Story JavaScript -> выделить всё (Ctrl+A) -> вставить.
+==============================================================================
+--- НАЧАЛО Story JavaScript (копируйте всё ниже) ---
 window.advanceTime = function(minutes, ignoreNeeds) {
   var game = State.variables.game;
   if (!game || !game.time) return;
@@ -387,7 +553,10 @@ window.HOUSING_OPTIONS = [
     desc: "Своя отдельная однушка без соседей: жилая комната (гостиная), спальня, кухня и санузел. Есть где готовить и отдыхать, но кабинета, спортзала и мастерской пока нет." },
   { id: "flat2", name: "Нормальная квартира",     rent: 800, startRoom: "living_room",
     rooms: ["living_room","bedroom","kitchen","bathroom","hallway","office"],
-    desc: "Просторная квартира: отдельная гостиная, спальня, кухня, ванная и даже кабинет для работы. Комфортно и просторно, но спортзала, мастерской и гаража пока нет." }
+    desc: "Просторная квартира: отдельная гостиная, спальня, кухня, ванная и даже кабинет для работы. Комфортно и просторно, но спортзала, мастерской и гаража пока нет." },
+  { id: "mansion", name: "🛠️ Богатый дом (для разработки)", rent: 0, dev: true, startRoom: "living_room",
+    rooms: ["living_room","bedroom","kitchen","bathroom","gym","office","workshop","garage","hallway","terrace"],
+    desc: "Огромный особняк со ВСЕМИ помещениями: спортзал, кабинет, мастерская, гараж и терраса. Служебный вариант для тестирования." }
 ];
 
 // Названия комнат для описания жилья
@@ -430,19 +599,28 @@ window.renderTraits = function() {
     + "<div class=\"cc-block\"><h2>Отрицательные (дают очки)</h2>" + neg.map(traitBtn).join("") + "</div>";
 };
 
+window.toggleFeature = function(name) {
+  var f = State.variables.game.player.appearance.features;
+  f[name] = !f[name];
+  window.ccRefresh("CharacterStep2");
+};
+
 window.toggleTrait = function(id) {
   var p = State.variables.game.player;
   if (!Array.isArray(p.traits)) p.traits = [];
   var i = p.traits.indexOf(id);
-  if (i !== -1) { p.traits.splice(i, 1); return; }
-  var tr = null;
-  window.TRAITS.forEach(function(x){ if (x.id === id) tr = x; });
-  if (!tr) return;
-  if (tr.sign === "pos" && window.getTraitPoints().left < tr.cost) {
-    alert("Не хватает очков черт. Возьмите отрицательную черту или откажитесь от другой положительной.");
-    return;
+  if (i !== -1) { p.traits.splice(i, 1); }
+  else {
+    var tr = null;
+    window.TRAITS.forEach(function(x){ if (x.id === id) tr = x; });
+    if (!tr) return;
+    if (tr.sign === "pos" && window.getTraitPoints().left < tr.cost) {
+      window.ccNotify("Не хватает очков черт: возьмите отрицательную черту или уберите другую положительную.");
+      return;
+    }
+    p.traits.push(id);
   }
-  p.traits.push(id);
+  window.ccRefresh("CharacterStep3");
 };
 window.traitName = function(id) {
   var n = id;
@@ -460,7 +638,7 @@ window.getSkillPointsLeft = function() {
 window.skillInc = function(id) {
   var s = State.variables.game.player.skills;
   if ((Number(s[id]) || window.SKILL_BASE) >= window.SKILL_MAX) return;
-  if (window.getSkillPointsLeft() <= 0) { alert("Свободные очки навыков закончились."); return; }
+  if (window.getSkillPointsLeft() <= 0) { window.ccNotify("Свободные очки навыков закончились."); return; }
   s[id] = (Number(s[id]) || window.SKILL_BASE) + 1;
 };
 window.skillDec = function(id) {
@@ -481,7 +659,7 @@ window.renderHousing = function() {
   window.HOUSING_OPTIONS.forEach(function(h) {
     var sel = (cur === h.id);
     var amenities = (h.rooms || []).map(function(r){ return window.ROOM_SHORT_NAMES[r] || r; }).join(", ");
-    out += "<div class=\"cc-house" + (sel ? " cc-house--selected" : "") + "\">"
+    out += "<div class=\"cc-house" + (sel ? " cc-house--selected" : "") + (h.dev ? " cc-house--dev" : "") + "\">"
       + "<div class=\"cc-house-head\">" + (sel ? "✓ " : "") + h.name + " — $" + h.rent + "/мес</div>"
       + "<div class=\"cc-house-desc\">" + h.desc + "</div>"
       + "<div class=\"cc-house-amen\">Помещения: " + amenities + ".</div>"
@@ -495,7 +673,7 @@ window.renderHousing = function() {
 };
 window.chooseHousing = function(id) {
   State.variables.game.player.housing = id;
-  Engine.play("CharacterStep5");
+  window.ccRefresh("CharacterStep5");
 };
 
 window.getHousing = function(id) {
@@ -533,77 +711,100 @@ window.BROW_SHAPES = { straight: "Прямые", arched: "Изогнутые", t
 window.EAR_SHAPES  = { normal: "Обычные", protruding: "Оттопыренные", close: "Прижатые", large: "Крупные", small: "Маленькие" };
 window.FEATURE_OPTIONS = { freckles: "Веснушки", moles: "Родинки", scars: "Шрамы", tattoos: "Татуировки", piercings: "Пирсинг" };
 
-window.setHairLength = function(v) {
-  var a = State.variables.game.player.appearance;
-  a.hairLength = Number(v);
-  var allowed = Object.keys(window.HAIRSTYLES_BY_LENGTH[a.hairLength] || {});
-  if (allowed.indexOf(a.hairStyle) === -1) a.hairStyle = window.DEFAULT_HAIRSTYLE[a.hairLength] || allowed[0];
-  if (a.hairLength === 1) a.hairStyle = "none";
-  Engine.play("CharacterStep2");
-};
-window.setHairTexture = function(v) { State.variables.game.player.appearance.hairTexture = v; Engine.play("CharacterStep2"); };
-window.setHairStyle = function(v) { State.variables.game.player.appearance.hairStyle = v; Engine.play("CharacterStep2"); };
-window.setAppearanceValue = function(key, v) {
-  var a = State.variables.game.player.appearance;
-  a[key] = (String(v).match(/^\d+$/)) ? Number(v) : v;
-  Engine.play("CharacterStep2");
-};
-window.toggleFeature = function(name) {
-  var f = State.variables.game.player.appearance.features;
-  f[name] = !f[name];
-  Engine.play("CharacterStep2");
+// Изменение поля внешности (через делегирование событий, без inline-обработчиков)
+window.ccNotify = function(msg) {
+  var n = document.getElementById("cc-notify");
+  if (!n) { n = document.createElement("div"); n.id = "cc-notify"; document.body.appendChild(n); }
+  n.textContent = msg;
+  n.classList.add("cc-notify--show");
+  clearTimeout(window.__ccNotifyT);
+  window.__ccNotifyT = setTimeout(function(){ n.classList.remove("cc-notify--show"); }, 2600);
 };
 
-// Нативный <select> с подписями/значениями
-function _nativeSelect(optionsObj, current, onChange, numeric) {
-  var html = "<select onchange=\"" + onChange + "(this.value)\">";
-  Object.keys(optionsObj).forEach(function(k) {
-    var val = numeric ? k : k;
-    var sel = (String(current) === String(k)) ? " selected" : "";
-    html += "<option value=\"" + k + "\"" + sel + ">" + optionsObj[k] + "</option>";
+// Безопасная перерисовка: откладываем на следующий тик, чтобы событие на нативном
+// элементе успело завершиться до уничтожения/пересоздания пассажа.
+window.ccRefresh = function(passage) {
+  var target = passage || (State.passage || "CharacterStep2");
+  setTimeout(function(){ Engine.play(target); }, 0);
+};
+
+// Варианты причёски для текущей длины волос (для <<optionsfrom>>: объект подпись->id)
+window.getHairStyleOptions = function() {
+  var len = State.variables.game.player.appearance.hairLength;
+  var map = {
+    2: { "Ёжик": "buzz", "Андеркат": "undercut" },
+    3: { "Классическая": "classic", "Боковой пробор": "sidepart", "Ёжик": "buzz", "Андеркат": "undercut" },
+    4: { "Каре": "bob", "Прямые": "straight", "Небрежные": "messy", "С чёлкой": "fringe" },
+    5: { "Распущенные": "loose", "Хвост": "ponytail", "Коса": "braid", "Пучок": "bun" }
+  };
+  return map[len] || {};
+};
+
+// Делегирование: один раз на документ (надёжнее inline onchange)
+window.initCCControls = function() {
+  if (window.__ccControlsInit) return;
+  window.__ccControlsInit = true;
+  // Нативные списки SugarCube (рост, волосы, борода и т.п.) сами сохраняют значение;
+  // после их изменения перерисовываем текущий пассаж редактора, чтобы обновить описание
+  // и зависимые списки (длина волос -> доступные причёски).
+  jQuery(document).on("change", "#passages .character-creation select.macro-listbox", function() {
+    var p = State.passage || "";
+    // Нативный listbox уже записал переменную. Для длины волос нормализуем причёску:
+    // если она не подходит новой длине — ставим вариант по умолчанию (для лысого — none).
+    if (p === "CharacterStep2") {
+      var row = jQuery(this).closest(".cc-select-row");
+      var label = jQuery.trim(row.find(".cc-slider-label").text());
+      if (row.length && label === "Длина:") {
+        var a = State.variables.game.player.appearance;
+        var allowed = window.HAIRSTYLES_BY_LENGTH[a.hairLength] || null;
+        if (a.hairLength === 1) {
+          a.hairStyle = "none";
+        } else if (allowed && !allowed[a.hairStyle]) {
+          a.hairStyle = window.DEFAULT_HAIRSTYLE[a.hairLength] || Object.keys(allowed)[0];
+        }
+      }
+    }
+    if (p.indexOf("Character") === 0 || p === "CharacterCreation") {
+      setTimeout(function(){ Engine.play(State.passage); }, 0);
+    }
   });
-  return html + "</select>";
-}
-
-// Рендер блока волос (длина управляет доступными причёсками)
-window.renderHairSection = function() {
-  var a = State.variables.game.player.appearance;
-  var lengthNames = { 1: "Лысый", 2: "Очень короткие", 3: "Короткие", 4: "Средние", 5: "Длинные" };
-  var out = "<div class=\"cc-select-row\"><span class=\"cc-slider-label\">Длина:</span>";
-  out += _nativeSelect(lengthNames, a.hairLength, "window.setHairLength", true);
-  out += "</div>";
-  out += "<div class=\"cc-select-row\"><span class=\"cc-slider-label\">Цвет:</span>";
-  out += _nativeSelect({
-    black: "Чёрные", dark: "Тёмные", brown: "Каштановые", light_brown: "Русые",
-    blonde: "Светлые", red: "Рыжие", gray: "Седые", pink: "Розовые", blue: "Синие"
-  }, a.hairColor, "window.setHairColor");
-  out += "</div>";
-  if (a.hairLength >= 3) {
-    out += "<div class=\"cc-select-row\"><span class=\"cc-slider-label\">Тип волос:</span>";
-    out += _nativeSelect(window.HAIR_TEXTURES, a.hairTexture || "straight", "window.setHairTexture");
-    out += "</div>";
-  }
-  if (a.hairLength >= 2) {
-    out += "<div class=\"cc-select-row\"><span class=\"cc-slider-label\">Причёска:</span>";
-    out += _nativeSelect(window.HAIRSTYLES_BY_LENGTH[a.hairLength] || {}, a.hairStyle, "window.setHairStyle");
-    out += "</div>";
-  } else {
-    out += "<div class=\"cc-hint\">Причёска и тип волос не выбираются — нет волос.</div>";
-  }
-  return out;
+  // Кнопки-тумблеры особых примет и черт (рендерятся через JS)
+  jQuery(document).on("click", "button[data-cc-toggle]", function() {
+    window.toggleFeature(this.getAttribute("data-cc-toggle"));
+  });
+  jQuery(document).on("click", "button[data-cc-trait]", function() {
+    window.toggleTrait(this.getAttribute("data-cc-trait"));
+  });
 };
-window.setHairColor = function(v) { State.variables.game.player.appearance.hairColor = v; Engine.play("CharacterStep2"); };
+jQuery(function(){ window.initCCControls(); });
 
-// Рендер блока особенностей (тумблеры)
+// Рендер особенностей (тумблеры)
 window.renderFeaturesSection = function() {
   var f = State.variables.game.player.appearance.features;
   var out = "<div class=\"cc-features\">";
   Object.keys(window.FEATURE_OPTIONS).forEach(function(key) {
     var on = !!f[key];
-    out += "<button class=\"cc-feature" + (on ? " cc-feature--on" : "") + "\" onclick=\"window.toggleFeature('" + key + "')\">"
+    out += "<button type=\"button\" class=\"cc-feature" + (on ? " cc-feature--on" : "") + "\" data-cc-toggle=\"" + key + "\">"
       + (on ? "✓ " : "") + window.FEATURE_OPTIONS[key] + "</button>";
   });
   return out + "</div>";
+};
+
+// Рендер черт (с data-привязкой)
+window.renderTraits = function() {
+  var t = State.variables.game.player.traits || [];
+  function traitBtn(tr) {
+    var on = t.indexOf(tr.id) !== -1;
+    var sign = tr.sign === "pos" ? ("−" + tr.cost) : ("+" + tr.cost);
+    var label = (on ? "✓ " : "") + tr.name + " (" + sign + ")";
+    return "<div class=\"cc-trait\"><div class=\"cc-trait-head\">"
+      + "<button type=\"button\" data-cc-trait=\"" + tr.id + "\">" + label + "</button></div>"
+      + "<div class=\"cc-trait-desc\">" + tr.desc + "</div></div>";
+  }
+  var pos = window.TRAITS.filter(function(x){return x.sign==="pos";}).sort(function(a,b){return a.cost-b.cost;});
+  var neg = window.TRAITS.filter(function(x){return x.sign==="neg";}).sort(function(a,b){return a.cost-b.cost;});
+  return "<div class=\"cc-block\"><h2>Положительные (тратят очки)</h2>" + pos.map(traitBtn).join("") + "</div>"
+    + "<div class=\"cc-block\"><h2>Отрицательные (дают очки)</h2>" + neg.map(traitBtn).join("") + "</div>";
 };
 
 window.getTraitsList = function() {
@@ -624,15 +825,13 @@ window.finishCharacterCreation = function() {
   g.started = true;                                          // показываем игровой интерфейс
   return h;
 };
---- КОНЕЦ БЛОКА ---
-
+--- КОНЕЦ Story JavaScript ---
 
 ==============================================================================
-СПЕЦ: Story Stylesheet
+ЧАСТЬ 3. Story Stylesheet (нужно, только если ещё не обновляли стили на 0.0.3.3)
+КУДА: меню Story -> Edit Story Stylesheet -> выделить всё (Ctrl+A) -> вставить.
 ==============================================================================
-КУДА: Story -> Edit Story Stylesheet (целиком)
-------------------------------------------------------------------------------
---- НАЧАЛО БЛОКА (копируйте всё ниже) ---
+--- НАЧАЛО Story Stylesheet ---
 :root {
   --bg-deep: #090b1a;
   --bg-main: #10142b;
@@ -1319,588 +1518,18 @@ html.game-not-started #ui-bar.stowed ~ #story { margin-left: 0 !important; }
 }
 .cc-feature--on { border-color: var(--accent); color: var(--accent); background: rgba(142,162,255,0.10); }
 .cc-house-amen { color: var(--text-main); font-size: 0.9em; margin-bottom: 6px; }
---- КОНЕЦ БЛОКА ---
 
 
-==============================================================================
-ПАССАЖ: StoryInit (переменные, новые поля внешности)
-==============================================================================
-КУДА: Узел StoryInit
-------------------------------------------------------------------------------
---- НАЧАЛО БЛОКА (копируйте всё ниже) ---
-<<set $game = {
-  location: "home",
-  room: "living_room",
-  player: {
-    name: "",
-    surname: "",
-    age: 20,
-    gender: "муж",
-    sleeping: false,
-    needs: {
-      energy: 80,
-      satiety: 80,
-      hygiene: 80,
-      social: 80,
-      fun: 80,
-      bladder: 80,
-      mood: 80
-    },
-    money: 1500,
-    appearance: {
-      height: 3,
-      bodyType: 3,
-      muscle: 3,
-      skinTone: 2,
-      eyeColor: "brown",
-      eyeShape: "almond",
-      noseShape: "straight",
-      browShape: "arched",
-      earShape: "normal",
-      faceShape: "average",
-      hairLength: 2,
-      hairColor: "dark",
-      hairTexture: "straight",
-      hairStyle: "classic",
-      facialHair: "none",
-      bodyHair: 1,
-      features: {
-        freckles: false,
-        moles: false,
-        scars: false,
-        tattoos: false,
-        piercings: false
-      }
-    },
-    traits: [],
-    skills: {
-      cooking: 1,
-      cleaning: 1,
-      charisma: 1,
-      sport: 1,
-      intelligence: 1,
-      programming: 1,
-      art: 1,
-      dance: 1,
-      repair: 1,
-      gardening: 1
-    },
-    housing: null
-  },
-  time: {
-    minute: 0,
-    hour: 8,
-    day: 1,
-    month: 1,
-    year: 1,
-    totalDays: 1,
-    weekday: "Понедельник"
-  },
-  world: {
-    seed: null,
-    npcs: {},
-    flags: {}
-  },
-  home: {
-    cleanliness: 50
-  },
-  inventory: [],
-  relationships: {},
-  events: {
-    active: [],
-    history: []
-  },
-  settings: {},
-  started: false
-}>>
---- КОНЕЦ БЛОКА ---
-
-
-==============================================================================
-ПАССАЖ: Main (меню)
-==============================================================================
-КУДА: Узел Main
-------------------------------------------------------------------------------
---- НАЧАЛО БЛОКА (копируйте всё ниже) ---
-<<nobr>>
-<div class="main-menu">
-  <h1 class="game-title">LifeSim</h1>
-  <p class="menu-subtitle">Симулятор жизни</p>
-
-  <div class="menu-buttons">
-    <<button "🆕 Новая игра">><<goto "CharacterCreation">><</button>>
-    <<button "💾 Продолжить / Загрузить">><<run UI.saves()>><</button>>
-    <<button "⚙️ Настройки">><<run UI.settings()>><</button>>
-    <<button "👤 Авторы">><<run alert("Starhead, DeepSeek, GPT")>><</button>>
-  </div>
-</div>
-<</nobr>>
---- КОНЕЦ БЛОКА ---
-
-
-==============================================================================
-ПАССАЖ: StoryCaption (сайдбар)
-==============================================================================
-КУДА: Узел StoryCaption
-------------------------------------------------------------------------------
---- НАЧАЛО БЛОКА (копируйте всё ниже) ---
-<<nobr>>
-<<if $game.started>>
-<div class="sidebar-content">
-  <div class="logo">LifeSim</div>
-  <div class="datetime">
-    <span class="time-emoji">☀️</span>
-    <span>
-      День <<= $game.time.day >>, <<= $game.time.weekday >>, <<= window.formatTime() >>
-    </span>
-  </div>
-  <div class="money">
-    💵 <<= $game.player.money >>
-  </div>
-
-  <<print window.renderNeedsPanel()>>
-
-  <div class="menu-buttons">
-    <<button "СТАТИСТИКА">><<run alert("Статистика")>><</button>>
-    <<button "ИНВЕНТАРЬ">><<run alert("Инвентарь")>><</button>>
-    <<button "ТЕЛЕФОН">><<run alert("Телефон")>><</button>>
-    <<button "КАРТА">><<run alert("Карта")>><</button>>
-    <<button "КТО РЯДОМ">><<run alert("Кто рядом")>><</button>>
-    <<button "КВЕСТЫ">><<run alert("Квесты")>><</button>>
-    <<button "ЧИТЫ">><<run alert("Читы")>><</button>>
-    <<button "НАСТРОЙКИ">><<run alert("Настройки")>><</button>>
-  </div>
-
-  <div class="sidebar-footer">
-    <<button "❓ FAQ">><<run alert("FAQ")>><</button>>
-  </div>
-</div>
-<</if>>
-<</nobr>>
---- КОНЕЦ БЛОКА ---
-
-
-==============================================================================
-ПАССАЖ: Шаг 1
-==============================================================================
-КУДА: Узел CharacterCreation
-------------------------------------------------------------------------------
---- НАЧАЛО БЛОКА (копируйте всё ниже) ---
-<<nobr>>
-<div class="character-creation">
-  <div class="cc-main-title">Создание персонажа</div>
-  <h1 class="cc-step-title">Шаг 1 — Кто вы?</h1>
-
-  <h2>Выбрать стандартный пресет</h2>
-  <div class="cc-presets">
-    <<button "👨 Адам">><<run window.applyAdamPreset()>><<goto "CharacterCreation">><</button>>
-    <<button "👩 Ева">><<run window.applyEvePreset()>><<goto "CharacterCreation">><</button>>
-  </div>
-  <p class="cc-hint">Адам и Ева — стандартные заготовки. После выбора всё можно изменить.</p>
-
-  <h2>Основная информация</h2>
-  <div class="cc-fields">
-    <label>Имя: <<textbox "$game.player.name" $game.player.name>></label>
-    <label>Фамилия: <<textbox "$game.player.surname" $game.player.surname>></label>
-    <label>Возраст: <<numberbox "$game.player.age" $game.player.age 16 99>></label>
-    <label>Пол:
-      <<listbox "$game.player.gender" autoselect>>
-        <<option "Мужчина" "муж">>
-        <<option "Женщина" "жен">>
-        <<option "Другой" "другой">>
-      <</listbox>>
-    </label>
-  </div>
-
-  <div class="cc-buttons">
-    <<link "← Назад в меню">><<goto "Main">><</link>>
-    <<link "Далее →">><<goto "CharacterStep2">><</link>>
-  </div>
-</div>
-<</nobr>>
---- КОНЕЦ БЛОКА ---
-
-
-==============================================================================
-ПАССАЖ: Шаг 2 Внешность
-==============================================================================
-КУДА: Узел CharacterStep2
-------------------------------------------------------------------------------
---- НАЧАЛО БЛОКА (копируйте всё ниже) ---
-<<nobr>>
-<div class="character-creation">
-  <div class="cc-main-title">Создание персонажа</div>
-  <h1 class="cc-step-title">Шаг 2 — Внешность</h1>
-
-  <div class="cc-appearance-desc">
-    <<print window.getAppearanceDescription()>>
-  </div>
-
-  <div class="cc-blocks">
-    <div class="cc-block">
-      <h2>Телосложение</h2>
-      <div class="cc-select-row"><span class="cc-slider-label">Рост:</span>
-        <<listbox "$game.player.appearance.height" autoselect>>
-          <<option "Очень низкий" 1>><<option "Низкий" 2>><<option "Средний" 3>>
-          <<option "Высокий" 4>><<option "Очень высокий" 5>>
-        <</listbox>>
-      </div>
-      <div class="cc-select-row"><span class="cc-slider-label">Телосложение:</span>
-        <<listbox "$game.player.appearance.bodyType" autoselect>>
-          <<option "Очень худое" 1>><<option "Худое" 2>><<option "Среднее" 3>>
-          <<option "Плотное" 4>><<option "Полное" 5>>
-        <</listbox>>
-      </div>
-      <div class="cc-select-row"><span class="cc-slider-label">Мускулатура:</span>
-        <<listbox "$game.player.appearance.muscle" autoselect>>
-          <<option "Очень слабая" 1>><<option "Слабая" 2>><<option "Средняя" 3>>
-          <<option "Развитая" 4>><<option "Очень развитая" 5>>
-        <</listbox>>
-      </div>
-      <div class="cc-select-row"><span class="cc-slider-label">Тон кожи:</span>
-        <<listbox "$game.player.appearance.skinTone" autoselect>>
-          <<option "Очень светлая" 1>><<option "Светлая" 2>><<option "Средняя" 3>>
-          <<option "Смуглая" 4>><<option "Тёмная" 5>>
-        <</listbox>>
-      </div>
-      <div class="cc-select-row"><span class="cc-slider-label">Волосы на теле:</span>
-        <<listbox "$game.player.appearance.bodyHair" autoselect>>
-          <<option "Нет" 0>><<option "Редкие" 1>><<option "Средние" 2>><<option "Густые" 3>>
-        <</listbox>>
-      </div>
-    </div>
-
-    <div class="cc-block">
-      <h2>Лицо</h2>
-      <div class="cc-select-row"><span class="cc-slider-label">Форма лица:</span>
-        <<listbox "$game.player.appearance.faceShape" autoselect>>
-          <<option "Круглое" "round">><<option "Овальное" "oval">><<option "Обычное" "average">>
-          <<option "Квадратное" "square">><<option "Вытянутое" "long">>
-        <</listbox>>
-      </div>
-      <div class="cc-select-row"><span class="cc-slider-label">Цвет глаз:</span>
-        <<listbox "$game.player.appearance.eyeColor" autoselect>>
-          <<option "Карие" "brown">><<option "Голубые" "blue">><<option "Зелёные" "green">>
-          <<option "Серые" "gray">><<option "Ореховые" "hazel">><<option "Чёрные" "black">>
-          <<option "Янтарные" "amber">><<option "Фиолетовые" "violet">>
-          <<option "Розовые" "pink">><<option "Разные (гетерохромия)" "hetero">>
-        <</listbox>>
-      </div>
-      <div class="cc-select-row"><span class="cc-slider-label">Разрез глаз:</span>
-        <<listbox "$game.player.appearance.eyeShape" autoselect>>
-          <<option "Миндалевидные" "almond">><<option "Круглые" "round">><<option "С нависшим веком" "hooded">>
-          <<option "Узкие" "narrow">><<option "Широкие" "wide">>
-        <</listbox>>
-      </div>
-      <div class="cc-select-row"><span class="cc-slider-label">Форма носа:</span>
-        <<listbox "$game.player.appearance.noseShape" autoselect>>
-          <<option "Прямой" "straight">><<option "Курносый" "snub">><<option "С горбинкой" "aquiline">>
-          <<option "Широкий" "wide">><<option "Тонкий" "narrow">>
-        <</listbox>>
-      </div>
-      <div class="cc-select-row"><span class="cc-slider-label">Брови:</span>
-        <<listbox "$game.player.appearance.browShape" autoselect>>
-          <<option "Прямые" "straight">><<option "Изогнутые" "arched">><<option "Густые" "thick">><<option "Тонкие" "thin">>
-        <</listbox>>
-      </div>
-      <div class="cc-select-row"><span class="cc-slider-label">Уши:</span>
-        <<listbox "$game.player.appearance.earShape" autoselect>>
-          <<option "Обычные" "normal">><<option "Оттопыренные" "protruding">><<option "Прижатые" "close">>
-          <<option "Крупные" "large">><<option "Маленькие" "small">>
-        <</listbox>>
-      </div>
-    </div>
-
-    <div class="cc-block">
-      <h2>Волосы</h2>
-      <<print window.renderHairSection()>>
-      <<if $game.player.gender == "муж">>
-        <div class="cc-select-row"><span class="cc-slider-label">Растительность на лице:</span>
-          <<listbox "$game.player.appearance.facialHair" autoselect>>
-            <<option "Нет" "none">><<option "Лёгкая щетина" "light_stubble">><<option "Щетина" "stubble">>
-            <<option "Усы" "mustache">><<option "Козлиная бородка" "goatee">><<option "Короткая борода" "short_beard">>
-            <<option "Густая борода" "full_beard">><<option "Борода и усы" "beard_mustache">>
-          <</listbox>>
-        </div>
-      <</if>>
-    </div>
-
-    <div class="cc-block">
-      <h2>Особые приметы</h2>
-      <p class="cc-hint">Нажмите, чтобы включить или выключить.</p>
-      <<print window.renderFeaturesSection()>>
-    </div>
-  </div>
-
-  <p class="cc-hint">Описание обновляется после перехода на следующий шаг и возврата (или по кнопке ниже).</p>
-  <div class="cc-buttons">
-    <<link "🔄 Обновить описание">><<goto "CharacterStep2">><</link>>
-    <<link "← Назад">><<goto "CharacterCreation">><</link>>
-    <<link "Далее →">><<goto "CharacterStep3">><</link>>
-  </div>
-</div>
-<</nobr>>
---- КОНЕЦ БЛОКА ---
-
-
-==============================================================================
-ПАССАЖ: Шаг 3 Черты
-==============================================================================
-КУДА: Узел CharacterStep3
-------------------------------------------------------------------------------
---- НАЧАЛО БЛОКА (копируйте всё ниже) ---
-<<nobr>>
-<div class="character-creation">
-  <div class="cc-main-title">Создание персонажа</div>
-  <h1 class="cc-step-title">Шаг 3 — Черты характера</h1>
-  <p class="cc-hint">Положительные черты тратят очки, отрицательные — добавляют. Осталось очков: <strong><<= window.getTraitPoints().left >></strong> из <<= window.TRAIT_BUDGET >>.</p>
-
-  <div class="cc-blocks">
-    <<print window.renderTraits()>>
-  </div>
-
-  <div class="cc-buttons">
-    <<link "← Назад">><<goto "CharacterStep2">><</link>>
-    <<link "Далее →">><<goto "CharacterStep4">><</link>>
-  </div>
-</div>
-<</nobr>>
---- КОНЕЦ БЛОКА ---
-
-
-==============================================================================
-ПАССАЖ: Шаг 4 Навыки
-==============================================================================
-КУДА: Узел CharacterStep4
-------------------------------------------------------------------------------
---- НАЧАЛО БЛОКА (копируйте всё ниже) ---
-<<nobr>>
-<div class="character-creation">
-  <div class="cc-main-title">Создание персонажа</div>
-  <h1 class="cc-step-title">Шаг 4 — Навыки</h1>
-  <p class="cc-hint">У всех навыков базовый уровень 1. Свободных очков: <strong><<= window.getSkillPointsLeft() >></strong> из <<= window.SKILL_POINTS >>. В один навык можно вложить максимум 2 очка.</p>
-
-  <div class="cc-block">
-    <h2>Стартовые навыки</h2>
-      <div class="cc-skill-row">
-        <span class="cc-skill-name"><<= window.skillName("cooking") >></span>
-        <span class="cc-skill-controls">
-          <<button "−">><<run window.skillDec("cooking")>><<goto "CharacterStep4">><</button>>
-          <span class="cc-skill-level"><<= $game.player.skills.cooking >></span>
-          <<button "+">><<run window.skillInc("cooking")>><<goto "CharacterStep4">><</button>>
-        </span>
-      </div>
-      <div class="cc-skill-row">
-        <span class="cc-skill-name"><<= window.skillName("cleaning") >></span>
-        <span class="cc-skill-controls">
-          <<button "−">><<run window.skillDec("cleaning")>><<goto "CharacterStep4">><</button>>
-          <span class="cc-skill-level"><<= $game.player.skills.cleaning >></span>
-          <<button "+">><<run window.skillInc("cleaning")>><<goto "CharacterStep4">><</button>>
-        </span>
-      </div>
-      <div class="cc-skill-row">
-        <span class="cc-skill-name"><<= window.skillName("charisma") >></span>
-        <span class="cc-skill-controls">
-          <<button "−">><<run window.skillDec("charisma")>><<goto "CharacterStep4">><</button>>
-          <span class="cc-skill-level"><<= $game.player.skills.charisma >></span>
-          <<button "+">><<run window.skillInc("charisma")>><<goto "CharacterStep4">><</button>>
-        </span>
-      </div>
-      <div class="cc-skill-row">
-        <span class="cc-skill-name"><<= window.skillName("sport") >></span>
-        <span class="cc-skill-controls">
-          <<button "−">><<run window.skillDec("sport")>><<goto "CharacterStep4">><</button>>
-          <span class="cc-skill-level"><<= $game.player.skills.sport >></span>
-          <<button "+">><<run window.skillInc("sport")>><<goto "CharacterStep4">><</button>>
-        </span>
-      </div>
-      <div class="cc-skill-row">
-        <span class="cc-skill-name"><<= window.skillName("intelligence") >></span>
-        <span class="cc-skill-controls">
-          <<button "−">><<run window.skillDec("intelligence")>><<goto "CharacterStep4">><</button>>
-          <span class="cc-skill-level"><<= $game.player.skills.intelligence >></span>
-          <<button "+">><<run window.skillInc("intelligence")>><<goto "CharacterStep4">><</button>>
-        </span>
-      </div>
-      <div class="cc-skill-row">
-        <span class="cc-skill-name"><<= window.skillName("programming") >></span>
-        <span class="cc-skill-controls">
-          <<button "−">><<run window.skillDec("programming")>><<goto "CharacterStep4">><</button>>
-          <span class="cc-skill-level"><<= $game.player.skills.programming >></span>
-          <<button "+">><<run window.skillInc("programming")>><<goto "CharacterStep4">><</button>>
-        </span>
-      </div>
-      <div class="cc-skill-row">
-        <span class="cc-skill-name"><<= window.skillName("art") >></span>
-        <span class="cc-skill-controls">
-          <<button "−">><<run window.skillDec("art")>><<goto "CharacterStep4">><</button>>
-          <span class="cc-skill-level"><<= $game.player.skills.art >></span>
-          <<button "+">><<run window.skillInc("art")>><<goto "CharacterStep4">><</button>>
-        </span>
-      </div>
-      <div class="cc-skill-row">
-        <span class="cc-skill-name"><<= window.skillName("dance") >></span>
-        <span class="cc-skill-controls">
-          <<button "−">><<run window.skillDec("dance")>><<goto "CharacterStep4">><</button>>
-          <span class="cc-skill-level"><<= $game.player.skills.dance >></span>
-          <<button "+">><<run window.skillInc("dance")>><<goto "CharacterStep4">><</button>>
-        </span>
-      </div>
-      <div class="cc-skill-row">
-        <span class="cc-skill-name"><<= window.skillName("repair") >></span>
-        <span class="cc-skill-controls">
-          <<button "−">><<run window.skillDec("repair")>><<goto "CharacterStep4">><</button>>
-          <span class="cc-skill-level"><<= $game.player.skills.repair >></span>
-          <<button "+">><<run window.skillInc("repair")>><<goto "CharacterStep4">><</button>>
-        </span>
-      </div>
-      <div class="cc-skill-row">
-        <span class="cc-skill-name"><<= window.skillName("gardening") >></span>
-        <span class="cc-skill-controls">
-          <<button "−">><<run window.skillDec("gardening")>><<goto "CharacterStep4">><</button>>
-          <span class="cc-skill-level"><<= $game.player.skills.gardening >></span>
-          <<button "+">><<run window.skillInc("gardening")>><<goto "CharacterStep4">><</button>>
-        </span>
-      </div>
-  </div>
-
-  <div class="cc-buttons">
-    <<link "← Назад">><<goto "CharacterStep3">><</link>>
-    <<link "Далее →">><<goto "CharacterStep5">><</link>>
-  </div>
-</div>
-<</nobr>>
---- КОНЕЦ БЛОКА ---
-
-
-==============================================================================
-ПАССАЖ: Шаг 5 Жильё
-==============================================================================
-КУДА: Узел CharacterStep5
-------------------------------------------------------------------------------
---- НАЧАЛО БЛОКА (копируйте всё ниже) ---
-<<nobr>>
-<div class="character-creation">
-  <div class="cc-main-title">Создание персонажа</div>
-  <h1 class="cc-step-title">Шаг 5 — Выбор жилья</h1>
-  <p class="cc-hint">Стартовые деньги: <strong>$<<= $game.player.money >></strong>. При переезде сразу списывается первый месяц аренды.</p>
-
-  <<print window.renderHousing()>>
-
-  <div class="cc-buttons">
-    <<link "← Назад">><<goto "CharacterStep4">><</link>>
-    <<link "Далее →">><<goto "CharacterStep6">><</link>>
-  </div>
-</div>
-<</nobr>>
---- КОНЕЦ БЛОКА ---
-
-
-==============================================================================
-ПАССАЖ: Шаг 6 Подтверждение
-==============================================================================
-КУДА: Узел CharacterStep6
-------------------------------------------------------------------------------
---- НАЧАЛО БЛОКА (копируйте всё ниже) ---
-<<nobr>>
-<div class="character-creation">
-  <div class="cc-main-title">Создание персонажа</div>
-  <h1 class="cc-step-title">Шаг 6 — Подтверждение</h1>
-
-  <div class="cc-block cc-summary">
-    <h2>Вы смотрите в зеркало…</h2>
-    <p><strong><<= $game.player.name >><<if $game.player.surname>> <<= $game.player.surname>><</if>></strong>, <<= $game.player.age >> г., <<= $game.player.gender === "муж" ? "мужчина" : $game.player.gender === "жен" ? "женщина" : "другой пол" >>.</p>
-    <p><<= window.getAppearanceDescription() >></p>
-    <p><strong>Черты:</strong> <<print window.getTraitsList()>></p>
-    <p><strong>Жильё:</strong> <<= window.getHousing($game.player.housing) ? window.getHousing($game.player.housing).name : "не выбрано" >> — аренда $<<= window.getHousing($game.player.housing) ? window.getHousing($game.player.housing).rent : 0 >>/мес.</p>
-    <p><strong>Деньги после оплаты:</strong> $<<= $game.player.money - (window.getHousing($game.player.housing) ? window.getHousing($game.player.housing).rent : 0) >></p>
-  </div>
-
-  <div class="cc-buttons">
-    <<link "← Назад">><<goto "CharacterStep5">><</link>>
-    <<if $game.player.housing>><<button "✅ Начать жизнь">><<run window.finishCharacterCreation()>><<goto "Home">><</button>><<else>><p class="cc-hint">Сначала выберите жильё на предыдущем шаге.</p><</if>>
-  </div>
-</div>
-<</nobr>>
---- КОНЕЦ БЛОКА ---
-
-
-==============================================================================
-ПАССАЖ: Home (игра, навигация по комнатам жилья)
-==============================================================================
-КУДА: Узел Home
-------------------------------------------------------------------------------
---- НАЧАЛО БЛОКА (копируйте всё ниже) ---
-<<nobr>>
-<<set _roomData = window.getRoomData($game.room)>>
-<div class="location-header">
-  <h1 class="location-title"><<= _roomData.name >></h1>
-  <div class="location-description">
-    <<= _roomData.description >>
-    <span class="location-time">Сейчас <<= window.formatTime() >>.</span>
-  </div>
-</div>
-<section class="game-section actions-section">
-  <h2>🎯 Действия</h2>
-  <div class="actions-list">
-    <<if $game.room == "living_room">>
-      <<link "📺 Смотреть телевизор (до +25 досуга, 1 час)">><<run advanceTime(60, ['fun'])>><<set $game.player.needs.fun = Math.min(100, $game.player.needs.fun + 25)>><<run finishAction()>><<goto "Home">><</link>>
-      <<link "📱 Поговорить по телефону (до +7 общения, 10 мин)">><<run advanceTime(10, ['social'])>><<set $game.player.needs.social = Math.min(100, $game.player.needs.social + 7)>><<run finishAction()>><<goto "Home">><</link>>
-      <<link "🗣️ Живое общение (до +25 общения, до +5 досуга, 30 мин)">><<run advanceTime(30, ['social', 'fun'])>><<set $game.player.needs.social = Math.min(100, $game.player.needs.social + 25)>><<set $game.player.needs.fun = Math.min(100, $game.player.needs.fun + 5)>><<run finishAction()>><<goto "Home">><</link>>
-    <</if>>
-    <<if $game.room == "kitchen">>
-      <<link "🍳 Готовить (-5 энергии, 1 час)">><<run advanceTime(60, ['energy'])>><<set $game.player.needs.energy = Math.max(0, $game.player.needs.energy - 5)>><<run finishAction()>><<goto "Home">><</link>>
-      <<link "🍔 Поесть (до +50 сытости, 30 мин)">><<run advanceTime(30, ['satiety'])>><<set $game.player.needs.satiety = Math.min(100, $game.player.needs.satiety + 50)>><<run finishAction()>><<goto "Home">><</link>>
-    <</if>>
-    <<if $game.room == "bedroom">>
-      <<link "😴 Спать 8 часов">><<set $game.player.sleeping = true>><<run advanceTime(480)>><<set $game.player.sleeping = false>><<run finishAction()>><<goto "Home">><</link>>
-    <</if>>
-    <<if $game.room == "bathroom">>
-      <<link "🚿 Принять душ (гигиена до 100, 10 мин)">><<run advanceTime(10, ['hygiene'])>><<set $game.player.needs.hygiene = 100>><<run finishAction()>><<goto "Home">><</link>>
-      <<link "🚽 Сходить в туалет (до 100, 2 мин)">><<run advanceTime(2, ['bladder'])>><<set $game.player.needs.bladder = 100>><<run finishAction()>><<goto "Home">><</link>>
-    <</if>>
-    <<if $game.room == "gym">>
-      <<link "🏋️ Спорт (до +15 досуга, -15 энергии, -5 сытости, 1 час)">><<run advanceTime(60, ['fun', 'energy', 'satiety'])>><<set $game.player.needs.fun = Math.min(100, $game.player.needs.fun + 15)>><<set $game.player.needs.energy = Math.max(0, $game.player.needs.energy - 15)>><<set $game.player.needs.satiety = Math.max(0, $game.player.needs.satiety - 5)>><<run finishAction()>><<goto "Home">><</link>>
-    <</if>>
-    <<if $game.room == "office">>
-      <<link "💻 Программировать (-10 энергии, 2 часа)">><<run advanceTime(120, ['energy'])>><<set $game.player.needs.energy = Math.max(0, $game.player.needs.energy - 10)>><<run finishAction()>><<goto "Home">><</link>>
-    <</if>>
-    <<if $game.room == "workshop">>
-      <<link "🎨 Рисовать (до +20 досуга, -3 энергии, 1 час)">><<run advanceTime(60, ['fun', 'energy'])>><<set $game.player.needs.fun = Math.min(100, $game.player.needs.fun + 20)>><<set $game.player.needs.energy = Math.max(0, $game.player.needs.energy - 3)>><<run finishAction()>><<goto "Home">><</link>>
-    <</if>>
-    <<if $game.room == "garage">>
-      <p>Здесь пока пусто. Позже появится транспорт и инструменты.</p>
-    <</if>>
-    <<if $game.room == "hallway">>
-      <p>Вы в прихожей. Отсюда можно будет выйти на улицу.</p>
-    <</if>>
-    <<if $game.room == "terrace">>
-      <p>Терраса. Свежий воздух и растения.</p>
-    <</if>>
-  </div>
-</section>
-<section class="game-section navigation-section">
-  <h2>🚪 Перейти в комнату</h2>
-  <div class="room-nav">
-    <<if $game.room != "living_room" && window.roomAvailable("living_room")>><<link "🛋️ Гостиная (1 мин)">><<run advanceTime(1)>><<run finishAction()>><<set $game.room = "living_room">><<goto "Home">><</link>><</if>>
-    <<if $game.room != "kitchen" && window.roomAvailable("kitchen")>><<link "🍳 Кухня (1 мин)">><<run advanceTime(1)>><<run finishAction()>><<set $game.room = "kitchen">><<goto "Home">><</link>><</if>>
-    <<if $game.room != "bedroom" && window.roomAvailable("bedroom")>><<link "🛏️ Спальня (1 мин)">><<run advanceTime(1)>><<run finishAction()>><<set $game.room = "bedroom">><<goto "Home">><</link>><</if>>
-    <<if $game.room != "bathroom" && window.roomAvailable("bathroom")>><<link "🚿 Ванная (1 мин)">><<run advanceTime(1)>><<run finishAction()>><<set $game.room = "bathroom">><<goto "Home">><</link>><</if>>
-    <<if $game.room != "gym" && window.roomAvailable("gym")>><<link "💪 Спортзал (1 мин)">><<run advanceTime(1)>><<run finishAction()>><<set $game.room = "gym">><<goto "Home">><</link>><</if>>
-    <<if $game.room != "office" && window.roomAvailable("office")>><<link "📚 Кабинет (1 мин)">><<run advanceTime(1)>><<run finishAction()>><<set $game.room = "office">><<goto "Home">><</link>><</if>>
-    <<if $game.room != "workshop" && window.roomAvailable("workshop")>><<link "🎨 Мастерская (1 мин)">><<run advanceTime(1)>><<run finishAction()>><<set $game.room = "workshop">><<goto "Home">><</link>><</if>>
-    <<if $game.room != "garage" && window.roomAvailable("garage")>><<link "🚗 Гараж (1 мин)">><<run advanceTime(1)>><<run finishAction()>><<set $game.room = "garage">><<goto "Home">><</link>><</if>>
-    <<if $game.room != "hallway" && window.roomAvailable("hallway")>><<link "🚪 Прихожая (1 мин)">><<run advanceTime(1)>><<run finishAction()>><<set $game.room = "hallway">><<goto "Home">><</link>><</if>>
-    <<if $game.room != "terrace" && window.roomAvailable("terrace")>><<link "🌿 Терраса (1 мин)">><<run advanceTime(1)>><<run finishAction()>><<set $game.room = "terrace">><<goto "Home">><</link>><</if>>
-  </div>
-</section>
-<section class="game-section cheats-section">
-  <h2>🧪 Читы для тестирования</h2>
-  <div class="actions-list">
-    <<link "💀 Установить все потребности на 0">><<set $game.player.needs.energy = 0>><<set $game.player.needs.satiety = 0>><<set $game.player.needs.hygiene = 0>><<set $game.player.needs.social = 0>><<set $game.player.needs.fun = 0>><<set $game.player.needs.bladder = 0>><<run updateMood()>><<goto "Home">><</link>>
-    <<link "✨ Установить все потребности на 100">><<set $game.player.needs.energy = 100>><<set $game.player.needs.satiety = 100>><<set $game.player.needs.hygiene = 100>><<set $game.player.needs.social = 100>><<set $game.player.needs.fun = 100>><<set $game.player.needs.bladder = 100>><<run updateMood()>><<goto "Home">><</link>>
-  </div>
-</section>
-<</nobr>>
---- КОНЕЦ БЛОКА ---
-
+/* Красная плашка-уведомление (вместо alert) */
+#cc-notify {
+  position: fixed; top: 24px; left: 50%; transform: translateX(-50%) translateY(-12px);
+  z-index: 100001; max-width: 80%; padding: 12px 22px;
+  background: rgba(120, 20, 30, 0.96); color: #ffd9de;
+  border: 1px solid #e05252; border-radius: 8px;
+  font-size: 0.95em; box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+  opacity: 0; pointer-events: none; transition: opacity .25s ease, transform .25s ease;
+}
+#cc-notify.cc-notify--show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.cc-house--dev { border-style: dashed; opacity: 0.92; }
+.cc-house--dev .cc-house-head { color: var(--gold); }
+--- КОНЕЦ Story Stylesheet ---

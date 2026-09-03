@@ -1350,33 +1350,51 @@ window.ccNotify = function(msg) {
 // Безопасная перерисовка: откладываем на следующий тик, чтобы событие на нативном
 // элементе успело завершиться до уничтожения/пересоздания пассажа.
 window.ccRefresh = function(passage) {
-  var target = passage || (Engine.passage ? Engine.passage() : "CharacterStep2");
+  var target = passage || (State.passage || "CharacterStep2");
   setTimeout(function(){ Engine.play(target); }, 0);
 };
 
-window.setCCField = function(key, val) {
-  var a = State.variables.game.player.appearance;
-  if (key === "hairLength") {
-    a.hairLength = Number(val);
-    var allowed = Object.keys(window.HAIRSTYLES_BY_LENGTH[a.hairLength] || {});
-    if (allowed.indexOf(a.hairStyle) === -1) a.hairStyle = (a.hairLength === 1) ? "none" : (window.DEFAULT_HAIRSTYLE[a.hairLength] || allowed[0]);
-    window.ccRefresh("CharacterStep2");
-    return;
-  }
-  if (key === "hairColor")   { a.hairColor = val;   window.ccRefresh("CharacterStep2"); return; }
-  if (key === "hairTexture"){ a.hairTexture = val; window.ccRefresh("CharacterStep2"); return; }
-  if (key === "hairStyle")   { a.hairStyle = val;   window.ccRefresh("CharacterStep2"); return; }
-  a[key] = /^\d+$/.test(String(val)) ? Number(val) : val;
-  window.ccRefresh("CharacterStep2");
+// Варианты причёски для текущей длины волос (для <<optionsfrom>>: объект подпись->id)
+window.getHairStyleOptions = function() {
+  var len = State.variables.game.player.appearance.hairLength;
+  var map = {
+    2: { "Ёжик": "buzz", "Андеркат": "undercut" },
+    3: { "Классическая": "classic", "Боковой пробор": "sidepart", "Ёжик": "buzz", "Андеркат": "undercut" },
+    4: { "Каре": "bob", "Прямые": "straight", "Небрежные": "messy", "С чёлкой": "fringe" },
+    5: { "Распущенные": "loose", "Хвост": "ponytail", "Коса": "braid", "Пучок": "bun" }
+  };
+  return map[len] || {};
 };
 
 // Делегирование: один раз на документ (надёжнее inline onchange)
 window.initCCControls = function() {
   if (window.__ccControlsInit) return;
   window.__ccControlsInit = true;
-  jQuery(document).on("change", "select[data-cc]", function() {
-    window.setCCField(this.getAttribute("data-cc"), this.value);
+  // Нативные списки SugarCube (рост, волосы, борода и т.п.) сами сохраняют значение;
+  // после их изменения перерисовываем текущий пассаж редактора, чтобы обновить описание
+  // и зависимые списки (длина волос -> доступные причёски).
+  jQuery(document).on("change", "#passages .character-creation select.macro-listbox", function() {
+    var p = State.passage || "";
+    // Нативный listbox уже записал переменную. Для длины волос нормализуем причёску:
+    // если она не подходит новой длине — ставим вариант по умолчанию (для лысого — none).
+    if (p === "CharacterStep2") {
+      var row = jQuery(this).closest(".cc-select-row");
+      var label = jQuery.trim(row.find(".cc-slider-label").text());
+      if (row.length && label === "Длина:") {
+        var a = State.variables.game.player.appearance;
+        var allowed = window.HAIRSTYLES_BY_LENGTH[a.hairLength] || null;
+        if (a.hairLength === 1) {
+          a.hairStyle = "none";
+        } else if (allowed && !allowed[a.hairStyle]) {
+          a.hairStyle = window.DEFAULT_HAIRSTYLE[a.hairLength] || Object.keys(allowed)[0];
+        }
+      }
+    }
+    if (p.indexOf("Character") === 0 || p === "CharacterCreation") {
+      setTimeout(function(){ Engine.play(State.passage); }, 0);
+    }
   });
+  // Кнопки-тумблеры особых примет и черт (рендерятся через JS)
   jQuery(document).on("click", "button[data-cc-toggle]", function() {
     window.toggleFeature(this.getAttribute("data-cc-toggle"));
   });
@@ -1385,38 +1403,6 @@ window.initCCControls = function() {
   });
 };
 jQuery(function(){ window.initCCControls(); });
-
-// Нативный <select> с data-привязкой
-function _nativeSelect(optionsObj, current, dataKey) {
-  var html = "<select data-cc=\"" + dataKey + "\">";
-  Object.keys(optionsObj).forEach(function(k) {
-    var sel = (String(current) === String(k)) ? " selected" : "";
-    html += "<option value=\"" + k + "\"" + sel + ">" + optionsObj[k] + "</option>";
-  });
-  return html + "</select>";
-}
-
-// Рендер блока волос
-window.renderHairSection = function() {
-  var a = State.variables.game.player.appearance;
-  var lengthNames = { 1: "Лысый", 2: "Очень короткие", 3: "Короткие", 4: "Средние", 5: "Длинные" };
-  var hairColors = { black:"Чёрные", dark:"Тёмные", brown:"Каштановые", light_brown:"Русые", blonde:"Светлые", red:"Рыжие", gray:"Седые", pink:"Розовые", blue:"Синие" };
-  var out = "<div class=\"cc-select-row\"><span class=\"cc-slider-label\">Длина:</span>";
-  out += _nativeSelect(lengthNames, a.hairLength, "hairLength") + "</div>";
-  if (a.hairLength === 1) {
-    out += "<div class=\"cc-hint\">Причёска и тип волос не выбираются — нет волос.</div>";
-    return out;
-  }
-  out += "<div class=\"cc-select-row\"><span class=\"cc-slider-label\">Цвет:</span>";
-  out += _nativeSelect(hairColors, a.hairColor, "hairColor") + "</div>";
-  if (a.hairLength >= 3) {
-    out += "<div class=\"cc-select-row\"><span class=\"cc-slider-label\">Тип волос:</span>";
-    out += _nativeSelect(window.HAIR_TEXTURES, a.hairTexture || "straight", "hairTexture") + "</div>";
-  }
-  out += "<div class=\"cc-select-row\"><span class=\"cc-slider-label\">Причёска:</span>";
-  out += _nativeSelect(window.HAIRSTYLES_BY_LENGTH[a.hairLength] || {}, a.hairStyle, "hairStyle") + "</div>";
-  return out;
-};
 
 // Рендер особенностей (тумблеры)
 window.renderFeaturesSection = function() {
@@ -1771,7 +1757,8 @@ window.finishCharacterCreation = function() {
       &lt;/div&gt;
       &lt;div class="cc-select-row"&gt;&lt;span class="cc-slider-label"&gt;Брови:&lt;/span&gt;
         &lt;&lt;listbox "$game.player.appearance.browShape" autoselect&gt;&gt;
-          &lt;&lt;option "Прямые" "straight"&gt;&gt;&lt;&lt;option "Изогнутые" "arched"&gt;&gt;&lt;&lt;option "Густые" "thick"&gt;&gt;&lt;&lt;option "Тонкие" "thin"&gt;&gt;
+          &lt;&lt;option "Прямые" "straight"&gt;&gt;&lt;&lt;option "Изогнутые" "arched"&gt;&gt;
+          &lt;&lt;option "Густые" "thick"&gt;&gt;&lt;&lt;option "Тонкие" "thin"&gt;&gt;
         &lt;&lt;/listbox&gt;&gt;
       &lt;/div&gt;
       &lt;div class="cc-select-row"&gt;&lt;span class="cc-slider-label"&gt;Уши:&lt;/span&gt;
@@ -1784,17 +1771,49 @@ window.finishCharacterCreation = function() {
 
     &lt;div class="cc-block"&gt;
       &lt;h2&gt;Волосы&lt;/h2&gt;
-      &lt;&lt;print window.renderHairSection()&gt;&gt;
-      &lt;&lt;if $game.player.gender == "муж"&gt;&gt;
-        &lt;div class="cc-select-row"&gt;&lt;span class="cc-slider-label"&gt;Растительность на лице:&lt;/span&gt;
-          &lt;&lt;listbox "$game.player.appearance.facialHair" autoselect&gt;&gt;
-            &lt;&lt;option "Нет" "none"&gt;&gt;&lt;&lt;option "Лёгкая щетина" "light_stubble"&gt;&gt;&lt;&lt;option "Щетина" "stubble"&gt;&gt;
-            &lt;&lt;option "Усы" "mustache"&gt;&gt;&lt;&lt;option "Козлиная бородка" "goatee"&gt;&gt;&lt;&lt;option "Короткая борода" "short_beard"&gt;&gt;
-            &lt;&lt;option "Густая борода" "full_beard"&gt;&gt;&lt;&lt;option "Борода и усы" "beard_mustache"&gt;&gt;
+      &lt;div class="cc-select-row"&gt;&lt;span class="cc-slider-label"&gt;Длина:&lt;/span&gt;
+        &lt;&lt;listbox "$game.player.appearance.hairLength" autoselect&gt;&gt;
+          &lt;&lt;option "Лысый" 1&gt;&gt;&lt;&lt;option "Очень короткие" 2&gt;&gt;&lt;&lt;option "Короткие" 3&gt;&gt;
+          &lt;&lt;option "Средние" 4&gt;&gt;&lt;&lt;option "Длинные" 5&gt;&gt;
+        &lt;&lt;/listbox&gt;&gt;
+      &lt;/div&gt;
+      &lt;&lt;if $game.player.appearance.hairLength !== 1&gt;&gt;
+        &lt;div class="cc-select-row"&gt;&lt;span class="cc-slider-label"&gt;Цвет:&lt;/span&gt;
+          &lt;&lt;listbox "$game.player.appearance.hairColor" autoselect&gt;&gt;
+            &lt;&lt;option "Чёрные" "black"&gt;&gt;&lt;&lt;option "Тёмные" "dark"&gt;&gt;&lt;&lt;option "Каштановые" "brown"&gt;&gt;
+            &lt;&lt;option "Русые" "light_brown"&gt;&gt;&lt;&lt;option "Светлые" "blonde"&gt;&gt;&lt;&lt;option "Рыжие" "red"&gt;&gt;
+            &lt;&lt;option "Седые" "gray"&gt;&gt;&lt;&lt;option "Розовые" "pink"&gt;&gt;&lt;&lt;option "Синие" "blue"&gt;&gt;
           &lt;&lt;/listbox&gt;&gt;
         &lt;/div&gt;
+        &lt;&lt;if $game.player.appearance.hairLength &gt;= 3&gt;&gt;
+          &lt;div class="cc-select-row"&gt;&lt;span class="cc-slider-label"&gt;Тип волос:&lt;/span&gt;
+            &lt;&lt;listbox "$game.player.appearance.hairTexture" autoselect&gt;&gt;
+              &lt;&lt;option "Прямые" "straight"&gt;&gt;&lt;&lt;option "Волнистые" "wavy"&gt;&gt;&lt;&lt;option "Кудрявые" "curly"&gt;&gt;
+            &lt;&lt;/listbox&gt;&gt;
+          &lt;/div&gt;
+        &lt;&lt;/if&gt;&gt;
+        &lt;div class="cc-select-row"&gt;&lt;span class="cc-slider-label"&gt;Причёска:&lt;/span&gt;
+          &lt;&lt;listbox "$game.player.appearance.hairStyle" autoselect&gt;&gt;
+            &lt;&lt;optionsfrom window.getHairStyleOptions()&gt;&gt;
+          &lt;&lt;/listbox&gt;&gt;
+        &lt;/div&gt;
+      &lt;&lt;else&gt;&gt;
+        &lt;p class="cc-hint"&gt;Причёска и тип волос не выбираются — нет волос.&lt;/p&gt;
       &lt;&lt;/if&gt;&gt;
     &lt;/div&gt;
+
+    &lt;&lt;if $game.player.gender == "муж"&gt;&gt;
+    &lt;div class="cc-block"&gt;
+      &lt;h2&gt;Растительность на лице&lt;/h2&gt;
+      &lt;div class="cc-select-row"&gt;&lt;span class="cc-slider-label"&gt;Борода / усы:&lt;/span&gt;
+        &lt;&lt;listbox "$game.player.appearance.facialHair" autoselect&gt;&gt;
+          &lt;&lt;option "Нет" "none"&gt;&gt;&lt;&lt;option "Лёгкая щетина" "light_stubble"&gt;&gt;&lt;&lt;option "Щетина" "stubble"&gt;&gt;
+          &lt;&lt;option "Усы" "mustache"&gt;&gt;&lt;&lt;option "Козлиная бородка" "goatee"&gt;&gt;&lt;&lt;option "Короткая борода" "short_beard"&gt;&gt;
+          &lt;&lt;option "Густая борода" "full_beard"&gt;&gt;&lt;&lt;option "Борода и усы" "beard_mustache"&gt;&gt;
+        &lt;&lt;/listbox&gt;&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+    &lt;&lt;/if&gt;&gt;
 
     &lt;div class="cc-block"&gt;
       &lt;h2&gt;Особые приметы&lt;/h2&gt;
@@ -1803,9 +1822,8 @@ window.finishCharacterCreation = function() {
     &lt;/div&gt;
   &lt;/div&gt;
 
-  &lt;p class="cc-hint"&gt;Описание обновляется после перехода на следующий шаг и возврата (или по кнопке ниже).&lt;/p&gt;
+  &lt;p class="cc-hint"&gt;Описание обновляется при каждом изменении.&lt;/p&gt;
   &lt;div class="cc-buttons"&gt;
-    &lt;&lt;link "🔄 Обновить описание"&gt;&gt;&lt;&lt;goto "CharacterStep2"&gt;&gt;&lt;&lt;/link&gt;&gt;
     &lt;&lt;link "← Назад"&gt;&gt;&lt;&lt;goto "CharacterCreation"&gt;&gt;&lt;&lt;/link&gt;&gt;
     &lt;&lt;link "Далее →"&gt;&gt;&lt;&lt;goto "CharacterStep3"&gt;&gt;&lt;&lt;/link&gt;&gt;
   &lt;/div&gt;
