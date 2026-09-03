@@ -1,0 +1,1906 @@
+#============================================================================
+# ШПАРГАЛКА LifeSim 0.0.3.3 — ОБНОВЛЕНИЕ ДЛЯ TWINE
+#============================================================================
+
+ПРОЩЕ ВСЕГО: Story -> Import from File -> LifeSim0.0.3.3.html (разрешить замену).
+
+НОВОЕ В 0.0.3.3: расширенная внешность (глаза, тип волос, причёски по длине, больше растительности, волосы на теле, форма носа/глаз/бровей/ушей, тумблеры веснушки/родинки/шрамы/тату/пирсинг), черты отсортированы по очкам и переименованы в 'Быстрообучаемый', жильё с понятным описанием и реальным отличием доступных комнат, исправлен предлог с/со в описании.
+
+==============================================================================
+СПЕЦ: Story JavaScript
+==============================================================================
+КУДА: Story -> Edit Story JavaScript (целиком)
+------------------------------------------------------------------------------
+--- НАЧАЛО БЛОКА (копируйте всё ниже) ---
+window.advanceTime = function(minutes, ignoreNeeds) {
+  var game = State.variables.game;
+  if (!game || !game.time) return;
+  var t = game.time;
+  t.minute += minutes;
+  while (t.minute >= 60) {
+    t.minute -= 60;
+    t.hour += 1;
+    if (t.hour >= 24) {
+      t.hour = 0;
+      t.totalDays += 1;
+      t.weekday = getWeekday(t.totalDays);
+      var daysInMonth = [31,28,31,30,31,30,31,31,30,31,30,31];
+      var days = t.totalDays;
+      var year = 1;
+      while (days > 365) {
+        days -= 365;
+        year++;
+      }
+      var month = 1;
+      while (days > daysInMonth[month-1]) {
+        days -= daysInMonth[month-1];
+        month++;
+      }
+      t.day = days;
+      t.month = month;
+      t.year = year;
+    }
+  }
+  updateNeeds(minutes, ignoreNeeds);
+};
+
+window.updateNeeds = function(minutes, ignoreNeeds) {
+  var p = State.variables.game.player;
+  if (!p || !p.needs) return;
+  if (!ignoreNeeds) ignoreNeeds = [];
+  if (!Array.isArray(ignoreNeeds)) ignoreNeeds = [ignoreNeeds];
+  function isIgnored(need) {
+    return ignoreNeeds.indexOf(need) !== -1;
+  }
+  var hours = minutes / 60;
+  if (p.sleeping) {
+    if (!isIgnored('energy')) p.needs.energy = Math.min(100, p.needs.energy + 15 * hours);
+    if (!isIgnored('satiety')) p.needs.satiety = Math.max(0, p.needs.satiety - 4 * hours);
+    if (!isIgnored('hygiene')) p.needs.hygiene = Math.max(0, p.needs.hygiene - 2 * hours);
+    if (!isIgnored('bladder')) p.needs.bladder = Math.max(0, p.needs.bladder - 6 * hours);
+  } else {
+    if (!isIgnored('energy')) p.needs.energy = Math.max(0, p.needs.energy - 4 * hours);
+    if (!isIgnored('satiety')) p.needs.satiety = Math.max(0, p.needs.satiety - 5 * hours);
+    if (!isIgnored('hygiene')) p.needs.hygiene = Math.max(0, p.needs.hygiene - 2 * hours);
+    if (!isIgnored('social')) p.needs.social = Math.max(0, p.needs.social - 2 * hours);
+    if (!isIgnored('fun')) p.needs.fun = Math.max(0, p.needs.fun - 2 * hours);
+    if (!isIgnored('bladder')) p.needs.bladder = Math.max(0, p.needs.bladder - 4 * hours);
+  }
+  p.needs.energy = Math.min(100, Math.max(0, p.needs.energy));
+  p.needs.satiety = Math.min(100, Math.max(0, p.needs.satiety));
+  p.needs.hygiene = Math.min(100, Math.max(0, p.needs.hygiene));
+  p.needs.social = Math.min(100, Math.max(0, p.needs.social));
+  p.needs.fun = Math.min(100, Math.max(0, p.needs.fun));
+  p.needs.bladder = Math.min(100, Math.max(0, p.needs.bladder));
+};
+
+window.getWeekday = function(totalDays) {
+  var weekdays = ["Понедельник", "Вторник", "Среда", "Четверг", "Пятница", "Суббота", "Воскресенье"];
+  return weekdays[(totalDays - 1) % 7];
+};
+
+window.formatTime = function() {
+  var game = State.variables.game;
+  if (!game || !game.time) return "--:--";
+  var t = game.time;
+  var h = t.hour;
+  var m = t.minute;
+  return h + ':' + (m < 10 ? '0' : '') + m;
+};
+
+window.checkCriticalNeeds = function() {
+  var p = State.variables.game.player;
+  if (!p || !p.needs) return;
+  if (p.needs.bladder <= 0) {
+    p.needs.bladder = 100;
+    p.needs.hygiene = Math.max(0, p.needs.hygiene - 30);
+  }
+};
+
+window.updateMood = function() {
+  var p = State.variables.game.player;
+  if (!p || !p.needs) return;
+  var n = p.needs;
+  var avg = (n.energy + n.satiety + n.hygiene + n.social + n.fun + n.bladder) / 6;
+  var penalty = 0;
+  if (n.energy < 30) penalty += 8;
+  if (n.satiety < 30) penalty += 10;
+  if (n.hygiene < 30) penalty += 5;
+  if (n.social < 30) penalty += 5;
+  if (n.fun < 30) penalty += 5;
+  if (n.bladder < 30) penalty += 10;
+  if (n.energy < 10) penalty += 10;
+  if (n.satiety < 10) penalty += 10;
+  if (n.bladder < 10) penalty += 10;
+  n.mood = Math.round(Math.min(100, Math.max(0, avg - penalty)));
+};
+
+// Функция определения уровня потребности (7 состояний)
+window.getNeedLevel = function(value) {
+  if (value < 15) return "critical";
+  if (value < 30) return "low";
+  if (value < 45) return "below-average";
+  if (value < 60) return "average";
+  if (value < 75) return "above-average";
+  if (value < 90) return "high";
+  return "excellent";
+};
+
+window.finishAction = function() {
+  checkCriticalNeeds();
+  updateMood();
+  // ВАЖНО: не округляем потребности здесь — только отображение через toFixed()
+};
+
+window.getRoomData = function(room) {
+  var rooms = {
+    living_room: { name: "🛋️ Гостиная", description: "Вы в гостиной — главном месте для отдыха и общения." },
+    kitchen: { name: "🍳 Кухня", description: "Вы на кухне. Здесь можно готовить и принимать пищу." },
+    bedroom: { name: "🛏️ Спальня", description: "Вы в своей спальне. Здесь можно отдохнуть и восстановить силы." },
+    bathroom: { name: "🚿 Ванная", description: "Вы в ванной комнате. Здесь можно привести себя в порядок." },
+    gym: { name: "💪 Спортзал", description: "Вы в домашнем спортзале." },
+    office: { name: "📚 Кабинет", description: "Вы в своём кабинете — месте для работы и занятий." },
+    workshop: { name: "🎨 Мастерская", description: "Вы в своей мастерской, где можно заниматься творчеством." },
+    garage: { name: "🚗 Гараж", description: "Вы в гараже. Здесь позже появятся транспорт и инструменты." },
+    hallway: { name: "🚪 Прихожая", description: "Вы в прихожей. Отсюда начинается путь в остальные части дома и наружу." },
+    terrace: { name: "🌿 Терраса", description: "Вы на террасе — небольшом открытом пространстве рядом с домом." }
+  };
+  return rooms[room] || { name: "Неизвестное место", description: "" };
+};
+
+// ===== Плавный переход экрана (затемнение -> осветление) =====
+window.setupFadeTransition = function() {
+  var overlay = document.getElementById("screen-fade");
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "screen-fade";
+    document.body.appendChild(overlay);
+  }
+  window.__fadeTimer = null;
+
+  var darken = function() {
+    if (window.__fadeTimer) { clearTimeout(window.__fadeTimer); window.__fadeTimer = null; }
+    overlay.classList.add("fading");
+  };
+  var lighten = function() {
+    overlay.classList.remove("fading");
+  };
+
+  // Затемнение при клике по переходу/действию/смене комнаты в игровой области
+  jQuery(document).on("click",
+    "#passages a.link-internal.macro-link, #passages button.macro-button",
+    function() {
+      darken();
+      // страховка: если переход не состоялся (открыт alert и т.п.) — вернуть яркость
+      window.__fadeTimer = setTimeout(lighten, 500);
+    }
+  );
+
+  // Осветление после того как новый пассаж показан
+  jQuery(document).on(":passagedisplay", function() {
+    if (window.__fadeTimer) { clearTimeout(window.__fadeTimer); window.__fadeTimer = null; }
+    setTimeout(lighten, 60);
+  });
+};
+jQuery(window).on("load", function() { setTimeout(window.setupFadeTransition, 50); });
+jQuery(function() { try { window.setupFadeTransition(); } catch (e) {} });
+
+// Скрытие игрового сайдбара, пока игра не начата (меню + редактор персонажа)
+jQuery(document).on(":passagedisplay", function () {
+  var started = !!(State.variables.game && State.variables.game.started);
+  jQuery(document.documentElement).toggleClass("game-not-started", !started);
+});
+
+window.getNeedColor = function(value) {
+  value = Number(value) || 0;
+  if (value < 10) return "#e05252";       // красный
+  else if (value < 25) return "#e58b3c";  // оранжевый
+  else if (value < 40) return "#d9c84a";  // жёлтый
+  else if (value < 55) return "#a8c85a";  // жёлто-зелёный
+  else if (value < 70) return "#76b96b";  // зеленоватый
+  else if (value < 90) return "#4fa36b";  // зелёный
+  return "#39c878";                       // ярко-зелёный
+};
+
+// Иконка настроения в зависимости от уровня
+window.getMoodIcon = function(value) {
+  value = Number(value) || 0;
+  if (value < 15) return "😭";        // ужасно
+  if (value < 30) return "😞";        // плохо
+  if (value < 45) return "😕";        // не очень
+  if (value < 60) return "😐";        // нейтрально
+  if (value < 75) return "🙂";        // нормально
+  if (value < 90) return "😊";        // хорошо
+  return "😄";                         // отлично
+};
+
+// Рендер одной шкалы потребности (готовый HTML — макросы внутри тегов SugarCube не вычисляет)
+window.renderNeedBar = function(icon, name, value, extraClass) {
+  value = Number(value) || 0;
+  var level = window.getNeedLevel(value);
+  var color = window.getNeedColor(value);   // инлайн-цвет — не зависит от CSS темы
+  var cls = "need-item" + (extraClass ? " " + extraClass : "");
+  return ""
+    + "<div class=\"" + cls + "\">"
+    +   "<div class=\"need-header\">"
+    +     "<span class=\"need-icon\">" + icon + "</span>"
+    +     "<span class=\"need-name\">" + name + "</span>"
+    +     "<span class=\"need-value\">" + value.toFixed(1) + "</span>"
+    +   "</div>"
+    +   "<div class=\"need-bar\">"
+    +     "<div class=\"need-fill need-" + level + "\" style=\"width:" + value + "%;background-color:" + color + ";\"></div>"
+    +   "</div>"
+    + "</div>";
+};
+
+// Рендер всей панели потребностей (сетка 2 колонки + настроение внизу)
+window.renderNeedsPanel = function() {
+  var n = State.variables.game.player.needs;
+  return ""
+    + "<div class=\"needs-panel\">"
+    +   "<div class=\"needs-panel-title\">Потребности</div>"
+    +   "<div class=\"needs-grid\">"
+    +     window.renderNeedBar("⚡", "Энергия",   n.energy)
+    +     window.renderNeedBar("🍔", "Сытость",   n.satiety)
+    +     window.renderNeedBar("🚿", "Гигиена",   n.hygiene)
+    +     window.renderNeedBar("💬", "Общение",   n.social)
+    +     window.renderNeedBar("🎮", "Досуг",     n.fun)
+    +     window.renderNeedBar("🚽", "Нужда",     n.bladder)
+    +     window.renderNeedBar(window.getMoodIcon(n.mood), "Настроение", n.mood, "need-item--mood")
+    +   "</div>"
+    + "</div>";
+};
+
+//Функция описания внешности
+window.getAppearanceDescription = function() {
+  var p = State.variables.game.player;
+  var a = p.appearance;
+  var male = (p.gender === "муж"), female = (p.gender === "жен");
+  var gWord = male ? "мужчина" : female ? "женщина" : "человек";
+  var himHer = male ? "него" : "неё";
+  var hisHer = male ? "его" : "её";
+
+  // Готовые формы с правильным предлогом с/со
+  var heightW  = ["очень низкого роста","низкого роста","среднего роста","высокого роста","очень высокого роста"];
+  var bodyW    = ["очень худого","худого","среднего","плотного","полного"];
+  var muscleW  = ["с очень слабой мускулатурой","со слабой мускулатурой","со средней мускулатурой","с развитой мускулатурой","с очень развитой мускулатурой"];
+
+  var skinNames = ["очень светлая","светлая","средняя","смуглая","тёмная"];
+  var faceShape = { round:"круглое", oval:"овальное", average:"обычное", square:"квадратное", long:"вытянутое" };
+  var eyeShape  = window.EYE_SHAPES;
+  var noseShape = window.NOSE_SHAPES;
+  var browShape = window.BROW_SHAPES;
+  var earShape  = window.EAR_SHAPES;
+  var hairLen   = { 1:"лысый", 2:"очень короткие", 3:"короткие", 4:"средней длины", 5:"длинные" };
+  var hairCol   = { black:"чёрные", dark:"тёмные", brown:"каштановые", light_brown:"русые", blonde:"светлые", red:"рыжие", gray:"седые", pink:"розовые", blue:"синие" };
+
+  var d = "Перед вами " + gWord + " " + heightW[a.height-1] + ", " + bodyW[a.bodyType-1]
+    + " телосложения, " + muscleW[a.muscle-1] + ". ";
+  d += "У " + himHer + " " + (faceShape[a.faceShape]||"обычное") + " лицо, "
+    + skinNames[a.skinTone-1] + " кожа и " + (window.EYE_COLORS[a.eyeColor]||"необычные").toLowerCase() + " "
+    + ((eyeShape[a.eyeShape]||"миндалевидные").toLowerCase()) + " глаза. ";
+  d += "Нос " + (noseShape[a.noseShape]||"прямой").toLowerCase() + ", брови "
+    + (browShape[a.browShape]||"прямые").toLowerCase() + ", уши "
+    + (earShape[a.earShape]||"обычные").toLowerCase() + ". ";
+
+  if (a.hairLength === 1) {
+    d += (male ? "Он лысый. " : female ? "Она лысая. " : "Волос нет. ");
+  } else {
+    d += "Волосы " + (hairLen[a.hairLength]||"средней длины") + ", " + (hairCol[a.hairColor]||"необычного цвета").toLowerCase();
+    if (a.hairLength >= 3 && window.HAIR_TEXTURES[a.hairTexture]) d += ", " + window.HAIR_TEXTURES[a.hairTexture].toLowerCase();
+    if (a.hairStyle && window.HAIRSTYLES_BY_LENGTH[a.hairLength] && window.HAIRSTYLES_BY_LENGTH[a.hairLength][a.hairStyle]) {
+      d += ", причёска — " + window.HAIRSTYLES_BY_LENGTH[a.hairLength][a.hairStyle].toLowerCase();
+    }
+    d += ". ";
+  }
+
+  // Растительность на лице
+  if (male && window.FACIAL_HAIR[a.facialHair] && a.facialHair !== "none") {
+    d += "На лице " + window.FACIAL_HAIR[a.facialHair].toLowerCase() + ". ";
+  } else if (male) {
+    d += "Лицо чисто выбрито. ";
+  }
+
+  // Волосы на теле (0 нет, 1 редкие, 2 средние, 3 густые)
+  var bh = Number(a.bodyHair);
+  if (bh === 3) d += "На теле густые волосы. ";
+  else if (bh === 2) d += "На теле заметны волосы средней густоты. ";
+  else if (bh === 1) d += "Редкие волосы на теле. ";
+  else if (bh === 0) d += "Кожа на теле гладкая, без волос. ";
+
+  // Особенности
+  var feats = [];
+  if (a.features.freckles) feats.push("веснушки");
+  if (a.features.moles) feats.push("родинки");
+  if (a.features.scars) feats.push("шрамы");
+  if (a.features.tattoos) feats.push("татуировки");
+  if (a.features.piercings) feats.push("пирсинг");
+  if (feats.length) d += "Особые приметы: " + feats.join(", ") + ". ";
+
+  return d.trim();
+};
+
+//Пресеты для редактора создания персонажа
+window.applyAdamPreset = function() {
+  var p = State.variables.game.player;
+  p.name = "Адам"; p.surname = ""; p.age = 22; p.gender = "муж";
+  p.appearance.height = 4; p.appearance.bodyType = 3; p.appearance.muscle = 3;
+  p.appearance.skinTone = 2; p.appearance.eyeColor = "brown"; p.appearance.eyeShape = "almond";
+  p.appearance.faceShape = "average"; p.appearance.noseShape = "straight"; p.appearance.browShape = "thick"; p.appearance.earShape = "normal";
+  p.appearance.hairLength = 3; p.appearance.hairColor = "dark"; p.appearance.hairTexture = "straight"; p.appearance.hairStyle = "classic";
+  p.appearance.facialHair = "stubble"; p.appearance.bodyHair = 2;
+  p.appearance.features = { freckles:false, moles:false, scars:false, tattoos:false, piercings:false };
+};
+
+window.applyEvePreset = function() {
+  var p = State.variables.game.player;
+  p.name = "Ева"; p.surname = ""; p.age = 21; p.gender = "жен";
+  p.appearance.height = 2; p.appearance.bodyType = 2; p.appearance.muscle = 1;
+  p.appearance.skinTone = 2; p.appearance.eyeColor = "blue"; p.appearance.eyeShape = "almond";
+  p.appearance.faceShape = "oval"; p.appearance.noseShape = "snub"; p.appearance.browShape = "arched"; p.appearance.earShape = "small";
+  p.appearance.hairLength = 5; p.appearance.hairColor = "blonde"; p.appearance.hairTexture = "wavy"; p.appearance.hairStyle = "loose";
+  p.appearance.facialHair = "none"; p.appearance.bodyHair = 0;
+  p.appearance.features = { freckles:true, moles:false, scars:false, tattoos:false, piercings:true };
+};
+
+// ============================================================
+//  ВЕРСИЯ 0.0.3 — создание персонажа: черты, навыки, жильё, старт
+// ============================================================
+
+// Бюджет очков черт (положительные тратят, отрицательные дают)
+window.TRAIT_BUDGET = 6;
+
+window.TRAITS = [
+  { id: "outgoing",    name: "Общительный",      sign: "pos", cost: 3, desc: "Проще знакомиться, потребность в общении падает медленнее." },
+  { id: "creative",    name: "Творческий",       sign: "pos", cost: 4, desc: "Быстрее растёт творчество, больше настроения от творческих занятий." },
+  { id: "enduring",    name: "Выносливый",       sign: "pos", cost: 4, desc: "Энергия расходуется медленнее." },
+  { id: "fastlearner", name: "Быстрообучаемый",  sign: "pos", cost: 5, desc: "Навыки развиваются заметно быстрее." },
+  { id: "clumsy",      name: "Неуклюжий",        sign: "neg", cost: 2, desc: "Выше вероятность неудач в действиях." },
+  { id: "messy",       name: "Неряшливый",       sign: "neg", cost: 2, desc: "Гигиена снижается быстрее." },
+  { id: "shy",         name: "Застенчивый",      sign: "neg", cost: 3, desc: "Знакомиться сложнее." },
+  { id: "lazy",        name: "Ленивый",          sign: "neg", cost: 4, desc: "Энергия быстрее тратится на некоторых действиях." }
+];
+
+window.SKILL_POINTS = 5;   // свободных очков навыков
+window.SKILL_BASE   = 1;   // базовый уровень
+window.SKILL_MAX    = 3;   // максимум (база + 2 в один навык)
+
+window.SKILLS = [
+  { id: "cooking",       name: "Кулинария" },
+  { id: "cleaning",      name: "Уборка" },
+  { id: "charisma",      name: "Обаяние" },
+  { id: "sport",         name: "Спорт" },
+  { id: "intelligence",  name: "Интеллект" },
+  { id: "programming",   name: "Программирование" },
+  { id: "art",           name: "Рисование" },
+  { id: "dance",         name: "Танцы" },
+  { id: "repair",        name: "Ремонт" },
+  { id: "gardening",     name: "Садоводство" }
+];
+
+window.HOUSING_OPTIONS = [
+  { id: "room",  name: "Комната (подселение)",    rent: 300, startRoom: "bedroom",
+    rooms: ["bedroom","bathroom","kitchen","hallway"],
+    desc: "Тесная отдельная комната в общей квартире. Кровать и тумба — ваши; кухня и санузел общие, на этаже. Гостиной, кабинета и спортзала нет — за этим придётся куда-то выбираться." },
+  { id: "flat1", name: "Однокомнатная квартира",  rent: 500, startRoom: "living_room",
+    rooms: ["living_room","bedroom","kitchen","bathroom","hallway"],
+    desc: "Своя отдельная однушка без соседей: жилая комната (гостиная), спальня, кухня и санузел. Есть где готовить и отдыхать, но кабинета, спортзала и мастерской пока нет." },
+  { id: "flat2", name: "Нормальная квартира",     rent: 800, startRoom: "living_room",
+    rooms: ["living_room","bedroom","kitchen","bathroom","hallway","office"],
+    desc: "Просторная квартира: отдельная гостиная, спальня, кухня, ванная и даже кабинет для работы. Комфортно и просторно, но спортзала, мастерской и гаража пока нет." }
+];
+
+// Названия комнат для описания жилья
+window.ROOM_SHORT_NAMES = {
+  living_room: "гостиная", bedroom: "спальня", kitchen: "кухня", bathroom: "ванная",
+  gym: "спортзал", office: "кабинет", workshop: "мастерская", garage: "гараж",
+  hallway: "прихожая", terrace: "терраса"
+};
+window.roomAvailable = function(room) {
+  var p = State.variables.game.player;
+  var h = window.getHousing(p.housing);
+  if (!h || !h.rooms) return true;
+  return h.rooms.indexOf(room) !== -1;
+};
+
+// --- Очки черт ---
+window.getTraitPoints = function() {
+  var t = State.variables.game.player.traits || [];
+  var spent = 0;
+  window.TRAITS.forEach(function(tr) {
+    if (t.indexOf(tr.id) !== -1) spent += (tr.sign === "pos" ? tr.cost : -tr.cost);
+  });
+  return { budget: window.TRAIT_BUDGET, spent: spent, left: window.TRAIT_BUDGET - spent };
+};
+window.renderTraits = function() {
+  var g = State.variables.game;
+  var t = g.player.traits || [];
+  var pts = window.getTraitPoints();
+  function traitBtn(tr) {
+    var on = t.indexOf(tr.id) !== -1;
+    var sign = tr.sign === "pos" ? ("−" + tr.cost) : ("+" + tr.cost);
+    var label = (on ? "✓ " : "") + tr.name + " (" + sign + ")";
+    return "<div class=\"cc-trait\"><div class=\"cc-trait-head\">"
+      + "<button onclick=\"window.toggleTrait('" + tr.id + "')\">" + label + "</button></div>"
+      + "<div class=\"cc-trait-desc\">" + tr.desc + "</div></div>";
+  }
+  var pos = window.TRAITS.filter(function(x){return x.sign==="pos";}).sort(function(a,b){return a.cost-b.cost;});
+  var neg = window.TRAITS.filter(function(x){return x.sign==="neg";}).sort(function(a,b){return a.cost-b.cost;});
+  return "<div class=\"cc-block\"><h2>Положительные (тратят очки)</h2>" + pos.map(traitBtn).join("") + "</div>"
+    + "<div class=\"cc-block\"><h2>Отрицательные (дают очки)</h2>" + neg.map(traitBtn).join("") + "</div>";
+};
+
+window.toggleTrait = function(id) {
+  var p = State.variables.game.player;
+  if (!Array.isArray(p.traits)) p.traits = [];
+  var i = p.traits.indexOf(id);
+  if (i !== -1) { p.traits.splice(i, 1); return; }
+  var tr = null;
+  window.TRAITS.forEach(function(x){ if (x.id === id) tr = x; });
+  if (!tr) return;
+  if (tr.sign === "pos" && window.getTraitPoints().left < tr.cost) {
+    alert("Не хватает очков черт. Возьмите отрицательную черту или откажитесь от другой положительной.");
+    return;
+  }
+  p.traits.push(id);
+};
+window.traitName = function(id) {
+  var n = id;
+  window.TRAITS.forEach(function(t){ if (t.id === id) n = t.name; });
+  return n;
+};
+
+// --- Навыки ---
+window.getSkillPointsLeft = function() {
+  var s = State.variables.game.player.skills;
+  var used = 0;
+  window.SKILLS.forEach(function(k){ used += (Number(s[k.id]) || window.SKILL_BASE) - window.SKILL_BASE; });
+  return window.SKILL_POINTS - used;
+};
+window.skillInc = function(id) {
+  var s = State.variables.game.player.skills;
+  if ((Number(s[id]) || window.SKILL_BASE) >= window.SKILL_MAX) return;
+  if (window.getSkillPointsLeft() <= 0) { alert("Свободные очки навыков закончились."); return; }
+  s[id] = (Number(s[id]) || window.SKILL_BASE) + 1;
+};
+window.skillDec = function(id) {
+  var s = State.variables.game.player.skills;
+  if ((Number(s[id]) || window.SKILL_BASE) > window.SKILL_BASE) s[id] = (Number(s[id]) || window.SKILL_BASE) - 1;
+};
+window.skillName = function(id) {
+  var n = id;
+  window.SKILLS.forEach(function(k){ if (k.id === id) n = k.name; });
+  return n;
+};
+
+// --- Жильё ---
+window.renderHousing = function() {
+  var g = State.variables.game;
+  var cur = g.player.housing;
+  var out = "<div class=\"cc-houses\">";
+  window.HOUSING_OPTIONS.forEach(function(h) {
+    var sel = (cur === h.id);
+    var amenities = (h.rooms || []).map(function(r){ return window.ROOM_SHORT_NAMES[r] || r; }).join(", ");
+    out += "<div class=\"cc-house" + (sel ? " cc-house--selected" : "") + "\">"
+      + "<div class=\"cc-house-head\">" + (sel ? "✓ " : "") + h.name + " — $" + h.rent + "/мес</div>"
+      + "<div class=\"cc-house-desc\">" + h.desc + "</div>"
+      + "<div class=\"cc-house-amen\">Помещения: " + amenities + ".</div>"
+      + "<div class=\"cc-house-after\">После оплаты останется: $" + (g.player.money - h.rent) + "</div>"
+      + "<div class=\"cc-house-btn\"><button onclick=\"window.chooseHousing('" + h.id + "')\">"
+      + (sel ? "Выбрано ✓" : "Выбрать") + "</button></div>"
+      + "</div>";
+  });
+  out += "</div>";
+  return out;
+};
+window.chooseHousing = function(id) {
+  State.variables.game.player.housing = id;
+  Engine.play("CharacterStep5");
+};
+
+window.getHousing = function(id) {
+  var h = null;
+  window.HOUSING_OPTIONS.forEach(function(x){ if (x.id === id) h = x; });
+  return h;
+};
+
+// --- Завершение создания персонажа ---
+// ===== Справочники внешности (0.0.3.3) =====
+window.EYE_COLORS = {
+  brown: "Карие", blue: "Голубые", green: "Зелёные", gray: "Серые",
+  hazel: "Ореховые", black: "Чёрные", amber: "Янтарные",
+  violet: "Фиолетовые", pink: "Розовые (альбинос)", hetero: "Разные (гетерохромия)"
+};
+window.HAIR_TEXTURES = { straight: "Прямые", wavy: "Волнистые", curly: "Кудрявые" };
+// Причёски, доступные для каждой длины волос (1=лысый .. 5=длинные)
+window.HAIRSTYLES_BY_LENGTH = {
+  1: { none: "Без причёски (лысый)" },
+  2: { buzz: "Ёжик", undercut: "Андеркат" },
+  3: { classic: "Классическая", sidepart: "Боковой пробор", buzz: "Ёжик", undercut: "Андеркат" },
+  4: { bob: "Каре", straight: "Прямые", messy: "Небрежные", fringe: "С чёлкой" },
+  5: { loose: "Распущенные", ponytail: "Хвост", braid: "Коса", bun: "Пучок" }
+};
+window.DEFAULT_HAIRSTYLE = { 1: "none", 2: "buzz", 3: "classic", 4: "straight", 5: "loose" };
+window.FACIAL_HAIR = {
+  none: "Нет", light_stubble: "Лёгкая щетина", stubble: "Щетина", mustache: "Усы",
+  goatee: "Козлиная бородка", short_beard: "Короткая борода",
+  full_beard: "Густая борода", beard_mustache: "Борода и усы"
+};
+window.BODY_HAIR = { 0: "Нет", 1: "Редкие", 2: "Средние", 3: "Густые" };
+window.NOSE_SHAPES = { straight: "Прямой", snub: "Курносый", aquiline: "С горбинкой", wide: "Широкий", narrow: "Тонкий" };
+window.EYE_SHAPES  = { almond: "Миндалевидные", round: "Круглые", hooded: "С нависшим веком", narrow: "Узкие", wide: "Широкие" };
+window.BROW_SHAPES = { straight: "Прямые", arched: "Изогнутые", thick: "Густые", thin: "Тонкие" };
+window.EAR_SHAPES  = { normal: "Обычные", protruding: "Оттопыренные", close: "Прижатые", large: "Крупные", small: "Маленькие" };
+window.FEATURE_OPTIONS = { freckles: "Веснушки", moles: "Родинки", scars: "Шрамы", tattoos: "Татуировки", piercings: "Пирсинг" };
+
+window.setHairLength = function(v) {
+  var a = State.variables.game.player.appearance;
+  a.hairLength = Number(v);
+  var allowed = Object.keys(window.HAIRSTYLES_BY_LENGTH[a.hairLength] || {});
+  if (allowed.indexOf(a.hairStyle) === -1) a.hairStyle = window.DEFAULT_HAIRSTYLE[a.hairLength] || allowed[0];
+  if (a.hairLength === 1) a.hairStyle = "none";
+  Engine.play("CharacterStep2");
+};
+window.setHairTexture = function(v) { State.variables.game.player.appearance.hairTexture = v; Engine.play("CharacterStep2"); };
+window.setHairStyle = function(v) { State.variables.game.player.appearance.hairStyle = v; Engine.play("CharacterStep2"); };
+window.setAppearanceValue = function(key, v) {
+  var a = State.variables.game.player.appearance;
+  a[key] = (String(v).match(/^\d+$/)) ? Number(v) : v;
+  Engine.play("CharacterStep2");
+};
+window.toggleFeature = function(name) {
+  var f = State.variables.game.player.appearance.features;
+  f[name] = !f[name];
+  Engine.play("CharacterStep2");
+};
+
+// Нативный <select> с подписями/значениями
+function _nativeSelect(optionsObj, current, onChange, numeric) {
+  var html = "<select onchange=\"" + onChange + "(this.value)\">";
+  Object.keys(optionsObj).forEach(function(k) {
+    var val = numeric ? k : k;
+    var sel = (String(current) === String(k)) ? " selected" : "";
+    html += "<option value=\"" + k + "\"" + sel + ">" + optionsObj[k] + "</option>";
+  });
+  return html + "</select>";
+}
+
+// Рендер блока волос (длина управляет доступными причёсками)
+window.renderHairSection = function() {
+  var a = State.variables.game.player.appearance;
+  var lengthNames = { 1: "Лысый", 2: "Очень короткие", 3: "Короткие", 4: "Средние", 5: "Длинные" };
+  var out = "<div class=\"cc-select-row\"><span class=\"cc-slider-label\">Длина:</span>";
+  out += _nativeSelect(lengthNames, a.hairLength, "window.setHairLength", true);
+  out += "</div>";
+  out += "<div class=\"cc-select-row\"><span class=\"cc-slider-label\">Цвет:</span>";
+  out += _nativeSelect({
+    black: "Чёрные", dark: "Тёмные", brown: "Каштановые", light_brown: "Русые",
+    blonde: "Светлые", red: "Рыжие", gray: "Седые", pink: "Розовые", blue: "Синие"
+  }, a.hairColor, "window.setHairColor");
+  out += "</div>";
+  if (a.hairLength >= 3) {
+    out += "<div class=\"cc-select-row\"><span class=\"cc-slider-label\">Тип волос:</span>";
+    out += _nativeSelect(window.HAIR_TEXTURES, a.hairTexture || "straight", "window.setHairTexture");
+    out += "</div>";
+  }
+  if (a.hairLength >= 2) {
+    out += "<div class=\"cc-select-row\"><span class=\"cc-slider-label\">Причёска:</span>";
+    out += _nativeSelect(window.HAIRSTYLES_BY_LENGTH[a.hairLength] || {}, a.hairStyle, "window.setHairStyle");
+    out += "</div>";
+  } else {
+    out += "<div class=\"cc-hint\">Причёска и тип волос не выбираются — нет волос.</div>";
+  }
+  return out;
+};
+window.setHairColor = function(v) { State.variables.game.player.appearance.hairColor = v; Engine.play("CharacterStep2"); };
+
+// Рендер блока особенностей (тумблеры)
+window.renderFeaturesSection = function() {
+  var f = State.variables.game.player.appearance.features;
+  var out = "<div class=\"cc-features\">";
+  Object.keys(window.FEATURE_OPTIONS).forEach(function(key) {
+    var on = !!f[key];
+    out += "<button class=\"cc-feature" + (on ? " cc-feature--on" : "") + "\" onclick=\"window.toggleFeature('" + key + "')\">"
+      + (on ? "✓ " : "") + window.FEATURE_OPTIONS[key] + "</button>";
+  });
+  return out + "</div>";
+};
+
+window.getTraitsList = function() {
+  var t = State.variables.game.player.traits || [];
+  if (!t.length) return "нет";
+  return t.map(window.traitName).join(", ");
+};
+
+window.finishCharacterCreation = function() {
+  var g = State.variables.game;
+  var p = g.player;
+  if (!p.name || !String(p.name).trim()) p.name = (p.gender === "жен") ? "Ева" : "Адам";
+  var h = window.getHousing(p.housing) || window.HOUSING_OPTIONS[1];
+  p.housing = h.id;
+  p.money = Math.max(0, (Number(p.money) || 0) - h.rent);  // списываем первый месяц аренды
+  g.location = "home";
+  g.room = h.startRoom || "living_room";
+  g.started = true;                                          // показываем игровой интерфейс
+  return h;
+};
+--- КОНЕЦ БЛОКА ---
+
+
+==============================================================================
+СПЕЦ: Story Stylesheet
+==============================================================================
+КУДА: Story -> Edit Story Stylesheet (целиком)
+------------------------------------------------------------------------------
+--- НАЧАЛО БЛОКА (копируйте всё ниже) ---
+:root {
+  --bg-deep: #090b1a;
+  --bg-main: #10142b;
+  --bg-panel: #151a33;
+  --bg-panel-hover: #1d2445;
+  --border: #343c67;
+  --border-hover: #6674b8;
+  --text-main: #f2f4ff;
+  --text-secondary: #aeb6d6;
+  --text-muted: #747d9f;
+  --accent: #8ea2ff;
+  --accent-soft: #c5ccff;
+  --gold: #f0c96a;
+}
+
+body {
+  background-color: var(--bg-deep);
+  color: var(--text-main);
+  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+#passages {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 20px 24px 40px;
+}
+
+#story {
+  margin: 0;
+  min-height: 0;
+  height: auto;
+}
+
+.passage {
+  animation: fadeIn 0.35s ease;
+  height: auto;
+  min-height: 0;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Боковая панель */
+#ui-bar {
+  background: linear-gradient(
+    180deg,
+    rgba(21, 26, 51, 0.96),
+    rgba(10, 13, 30, 0.98)
+  );
+  border-right: 1px solid var(--border);
+  box-shadow: 8px 0 30px rgba(0, 0, 0, 0.25);
+  width: 280px;
+}
+
+#ui-bar .sidebar-content {
+  padding: 12px;
+}
+
+.logo {
+  font-size: 27px;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+  text-shadow: 0 0 10px rgba(142, 162, 255, 0.2);
+}
+
+.datetime,
+.money {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.money {
+  color: var(--gold);
+}
+
+/* ПОТРЕБНОСТИ — панель в одной рамке */
+#ui-bar .needs-panel {
+  width: 100%;
+  margin: 14px 0 10px;
+  padding: 10px 10px 12px;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.25);
+}
+
+#ui-bar .needs-panel-title {
+  margin: 0 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+#ui-bar .needs-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 10px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+#ui-bar .need-item {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Шкала настроения — внизу панели, на всю ширину */
+#ui-bar .need-item--mood {
+  grid-column: 1 / -1;
+  display: block;
+  width: 100%;
+  margin: 12px 0 0;
+  padding: 10px 0 0;
+  border-top: 1px solid rgba(52, 60, 103, 0.7);
+  box-sizing: border-box;
+}
+
+#ui-bar .need-header {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin: 0 0 5px 0;
+  padding: 0;
+  font-size: 12px;
+  box-sizing: border-box;
+}
+
+#ui-bar .need-icon {
+  flex: 0 0 18px;
+  width: 18px;
+  margin-right: 4px;
+  font-size: 13px;
+  text-align: center;
+}
+
+#ui-bar .need-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-secondary);
+}
+
+#ui-bar .need-value {
+  flex: 0 0 auto;
+  margin-left: 4px;
+  font-size: 10px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+#ui-bar .need-bar {
+  display: block;
+  position: relative;
+  width: 100%;
+  height: 8px;
+  overflow: hidden;
+  background-color: #0d1020;
+  border: 1px solid #343c67;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+#ui-bar .need-fill {
+  display: block;
+  height: 100%;
+  min-height: 6px;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+/* Цвета */
+#ui-bar .need-fill.need-critical {
+  background-color: #e05252;
+}
+
+#ui-bar .need-fill.need-low {
+  background-color: #e58b3c;
+}
+
+#ui-bar .need-fill.need-below-average {
+  background-color: #d9c84a;
+}
+
+#ui-bar .need-fill.need-average {
+  background-color: #a8c85a;
+}
+
+#ui-bar .need-fill.need-above-average {
+  background-color: #76b96b;
+}
+
+#ui-bar .need-fill.need-high {
+  background-color: #4fa36b;
+}
+
+#ui-bar .need-fill.need-excellent {
+  background-color: #39c878;
+}
+
+/* Кнопки меню */
+#ui-bar .menu-buttons {
+  margin-top: 4px;
+}
+
+#ui-bar .menu-buttons button,
+#ui-bar .sidebar-footer button {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  margin: 0 0 5px;
+  padding: 7px 9px;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+#ui-bar .menu-buttons button:hover,
+#ui-bar .sidebar-footer button:hover {
+  background: var(--bg-panel-hover);
+  border-color: var(--border-hover);
+  color: var(--text-main);
+}
+
+.sidebar-footer {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+/* Заголовки локаций */
+.location-title {
+  font-size: 1.6em;
+  margin-bottom: 0.2em;
+  color: var(--accent);
+}
+
+.location-description {
+  margin-bottom: 0.8em;
+  color: var(--text-secondary);
+}
+
+.location-time {
+  margin-left: 0.5em;
+  color: var(--text-muted);
+}
+
+h2 {
+  font-size: 1.2em;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 3px;
+  margin-top: 1.2em;
+  margin-bottom: 0.6em;
+  color: var(--text-main);
+}
+
+/* Секции */
+.game-section {
+  margin-top: 20px;
+}
+
+.game-section:first-of-type {
+  margin-top: 10px;
+}
+
+/* Действия */
+.actions-list {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.actions-list .link-internal {
+  margin: 0;
+}
+
+.actions-section .link-internal {
+  display: block;
+  width: fit-content;
+  padding: 6px 10px;
+  background: rgba(21, 26, 51, 0.82);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-main);
+  text-decoration: none;
+  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+}
+
+.actions-section .link-internal:hover {
+  background: var(--bg-panel-hover);
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+/* Навигация по комнатам */
+.room-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.room-nav .link-internal {
+  margin: 0;
+  padding: 5px 8px;
+  font-size: 0.9em;
+  background: rgba(21, 26, 51, 0.82);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-main);
+  text-decoration: none;
+}
+
+.room-nav .link-internal:hover {
+  background: var(--bg-panel-hover);
+  border-color: var(--accent);
+}
+
+/* Читы */
+.cheats-section {
+  opacity: 0.75;
+  margin-top: 30px;
+}
+
+.cheats-section .link-internal {
+  display: block;
+  width: fit-content;
+  margin: 4px 0;
+  padding: 5px 8px;
+  background: rgba(21, 26, 51, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-secondary);
+}
+
+/* Главное меню */
+.main-menu {
+  text-align: center;
+  margin-top: 30px;
+}
+
+.game-title {
+  font-size: 2.5em;
+  margin-bottom: 0.1em;
+  color: var(--accent);
+}
+
+.menu-subtitle {
+  font-size: 1.1em;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+}
+
+.main-menu .menu-buttons button {
+  display: block;
+  width: 250px;
+  margin: 0 auto 8px;
+  padding: 10px;
+  font-size: 1.1em;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-main);
+}
+
+/* Убираем лишние отступы */
+#story,
+#passages,
+.passage {
+  min-height: 0;
+  height: auto;
+}
+
+.location-header p,
+.actions-section p,
+.navigation-section p,
+.cheats-section p {
+  margin: 0;
+  padding: 0;
+}
+
+p:empty {
+  display: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* ===== Плавный переход: затемнение -> осветление при смене локации/действии ===== */
+#screen-fade {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  pointer-events: none;
+  background: #000000;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.18s ease, visibility 0s linear 0.18s;
+}
+#screen-fade.fading {
+  opacity: 0.5;
+  visibility: visible;
+  transition: opacity 0.18s ease, visibility 0s;
+}
+
+/* =========================
+   РЕДАКТОР ПЕРСОНАЖА
+   ========================= */
+.character-creation {
+  max-width: 600px;
+  margin: 20px auto;
+  padding: 24px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.cc-title {
+  font-size: 2em;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.5px;
+  margin-bottom: 0.5em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--border);
+  text-shadow: 0 0 10px rgba(142, 162, 255, 0.2);
+}
+
+.cc-subtitle {
+  display: block;
+  font-size: 1em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--text-secondary);
+  margin-bottom: 1.8em;
+}
+
+.cc-presets {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 1.8em;
+}
+
+.cc-presets .link-internal {
+  padding: 10px 20px;
+  background: var(--bg-panel-hover);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-main);
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+}
+
+.cc-presets .link-internal:hover {
+  background: var(--bg-panel-hover);
+  border-color: var(--border-hover);
+  transform: translateY(-1px);
+}
+
+.cc-fields label {
+  display: block;
+  margin-bottom: 1em;
+  font-size: 0.9em;
+  color: var(--text-secondary);
+}
+
+.cc-fields input,
+.cc-fields select {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 6px 8px;
+  margin-top: 4px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-main);
+}
+
+.cc-buttons {
+  margin-top: 1.5em;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.cc-buttons .link-internal {
+  padding: 8px 20px;
+  background: var(--bg-panel-hover);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-main);
+  text-decoration: none;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.cc-buttons .link-internal:hover {
+  background: var(--bg-panel-hover);
+  border-color: var(--border-hover);
+}
+
+.cc-main-title {
+  font-size: 2.2em;
+  font-weight: bold;
+  color: var(--accent);
+  text-align: center;
+  margin-bottom: 0.2em;
+  text-shadow: 0 0 12px rgba(142, 162, 255, 0.5);
+}
+
+.cc-subtitle {
+  font-size: 1.1em;
+  color: var(--text-muted);
+  text-align: center;
+  margin-bottom: 1.5em;
+}
+
+/* Шаг 2 — Внешность */
+.cc-appearance-desc {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 1.5em;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.cc-blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2em;
+  margin-bottom: 1.5em;
+}
+
+.cc-block {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.cc-block h2 {
+  margin-top: 0;
+  margin-bottom: 0.6em;
+  font-size: 1.1em;
+  color: var(--accent);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 4px;
+}
+
+.cc-slider-row,
+.cc-select-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 0.8em;
+}
+
+.cc-slider-label {
+  min-width: 120px;
+  color: var(--text-secondary);
+  font-size: 0.9em;
+}
+
+.cc-slider-value {
+  color: var(--text-main);
+  font-size: 0.9em;
+  font-weight: 500;
+  margin-left: auto;
+}
+
+/* Стили для <<cycle>> — будут выглядеть как интерактивные переключатели */
+.cc-slider-control .macro-cycle {
+  display: inline-block;
+  padding: 4px 8px;
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text-main);
+}
+
+.cc-slider-control .macro-cycle:hover {
+  border-color: var(--border-hover);
+}
+
+/* Скрыть игровой сайдбар, пока игра не начата (главное меню + редактор персонажа) */
+html.game-not-started #ui-bar { display: none !important; }
+html.game-not-started #story { margin-left: 0 !important; }
+html.game-not-started #ui-bar.stowed ~ #story { margin-left: 0 !important; }
+
+
+/* ===== Редактор: черты, навыки, жильё, сводка ===== */
+.cc-hint { color: var(--text-secondary); font-size: 0.92em; }
+.cc-trait {
+  padding: 8px 10px; margin: 6px 0;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border); border-radius: 6px;
+}
+.cc-trait-head button {
+  width: 100%; text-align: left; padding: 6px 10px;
+  background: var(--bg-panel); border: 1px solid var(--border);
+  border-radius: 5px; color: var(--text-main); cursor: pointer;
+}
+.cc-trait-head button:hover { border-color: var(--accent); }
+.cc-trait-desc { color: var(--text-muted); font-size: 0.85em; margin-top: 4px; }
+.cc-skill-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 4px; border-bottom: 1px solid rgba(52,60,103,0.4);
+}
+.cc-skill-name { color: var(--text-secondary); }
+.cc-skill-controls { display: inline-flex; align-items: center; gap: 8px; }
+.cc-skill-controls button {
+  width: 30px; height: 26px; background: var(--bg-panel);
+  border: 1px solid var(--border); border-radius: 5px;
+  color: var(--text-main); cursor: pointer; font-weight: 700;
+}
+.cc-skill-controls button:hover { border-color: var(--accent); }
+.cc-skill-level { min-width: 22px; text-align: center; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+.cc-houses { display: flex; flex-direction: column; gap: 10px; }
+.cc-house {
+  padding: 12px; background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border); border-radius: 8px;
+}
+.cc-house--selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); background: rgba(142,162,255,0.08); }
+.cc-house-head { font-size: 1.05em; font-weight: 700; color: var(--text-main); margin-bottom: 4px; }
+.cc-house-desc { color: var(--text-secondary); font-size: 0.9em; margin-bottom: 6px; }
+.cc-house-after { color: var(--gold); font-size: 0.9em; margin-bottom: 8px; }
+.cc-house-btn button {
+  padding: 6px 14px; background: var(--bg-panel);
+  border: 1px solid var(--border); border-radius: 6px; color: var(--text-main); cursor: pointer;
+}
+.cc-house--selected .cc-house-btn button { border-color: var(--accent); color: var(--accent); }
+.cc-summary p { margin: 6px 0; line-height: 1.5; }
+.cc-fields { display: flex; flex-direction: column; gap: 10px; margin: 10px 0; }
+.cc-fields label { display: flex; flex-direction: column; gap: 4px; color: var(--text-secondary); font-size: 0.92em; }
+.cc-fields input, .cc-fields select, .cc-block select, .cc-select-row select {
+  background: var(--bg-panel); color: var(--text-main);
+  border: 1px solid var(--border); border-radius: 5px; padding: 6px 8px;
+}
+.cc-presets { display: flex; gap: 10px; margin: 10px 0; }
+.cc-presets button {
+  flex: 1; padding: 10px; background: var(--bg-panel);
+  border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); cursor: pointer; font-size: 1em;
+}
+.cc-presets button:hover { border-color: var(--accent); transform: translateY(-1px); }
+
+
+/* Особые приметы (тумблеры) */
+.cc-features { display: flex; flex-wrap: wrap; gap: 8px; }
+.cc-feature {
+  padding: 6px 12px; background: var(--bg-panel);
+  border: 1px solid var(--border); border-radius: 20px;
+  color: var(--text-secondary); cursor: pointer;
+}
+.cc-feature--on { border-color: var(--accent); color: var(--accent); background: rgba(142,162,255,0.10); }
+.cc-house-amen { color: var(--text-main); font-size: 0.9em; margin-bottom: 6px; }
+--- КОНЕЦ БЛОКА ---
+
+
+==============================================================================
+ПАССАЖ: StoryInit (переменные, новые поля внешности)
+==============================================================================
+КУДА: Узел StoryInit
+------------------------------------------------------------------------------
+--- НАЧАЛО БЛОКА (копируйте всё ниже) ---
+<<set $game = {
+  location: "home",
+  room: "living_room",
+  player: {
+    name: "",
+    surname: "",
+    age: 20,
+    gender: "муж",
+    sleeping: false,
+    needs: {
+      energy: 80,
+      satiety: 80,
+      hygiene: 80,
+      social: 80,
+      fun: 80,
+      bladder: 80,
+      mood: 80
+    },
+    money: 1500,
+    appearance: {
+      height: 3,
+      bodyType: 3,
+      muscle: 3,
+      skinTone: 2,
+      eyeColor: "brown",
+      eyeShape: "almond",
+      noseShape: "straight",
+      browShape: "arched",
+      earShape: "normal",
+      faceShape: "average",
+      hairLength: 2,
+      hairColor: "dark",
+      hairTexture: "straight",
+      hairStyle: "classic",
+      facialHair: "none",
+      bodyHair: 1,
+      features: {
+        freckles: false,
+        moles: false,
+        scars: false,
+        tattoos: false,
+        piercings: false
+      }
+    },
+    traits: [],
+    skills: {
+      cooking: 1,
+      cleaning: 1,
+      charisma: 1,
+      sport: 1,
+      intelligence: 1,
+      programming: 1,
+      art: 1,
+      dance: 1,
+      repair: 1,
+      gardening: 1
+    },
+    housing: null
+  },
+  time: {
+    minute: 0,
+    hour: 8,
+    day: 1,
+    month: 1,
+    year: 1,
+    totalDays: 1,
+    weekday: "Понедельник"
+  },
+  world: {
+    seed: null,
+    npcs: {},
+    flags: {}
+  },
+  home: {
+    cleanliness: 50
+  },
+  inventory: [],
+  relationships: {},
+  events: {
+    active: [],
+    history: []
+  },
+  settings: {},
+  started: false
+}>>
+--- КОНЕЦ БЛОКА ---
+
+
+==============================================================================
+ПАССАЖ: Main (меню)
+==============================================================================
+КУДА: Узел Main
+------------------------------------------------------------------------------
+--- НАЧАЛО БЛОКА (копируйте всё ниже) ---
+<<nobr>>
+<div class="main-menu">
+  <h1 class="game-title">LifeSim</h1>
+  <p class="menu-subtitle">Симулятор жизни</p>
+
+  <div class="menu-buttons">
+    <<button "🆕 Новая игра">><<goto "CharacterCreation">><</button>>
+    <<button "💾 Продолжить / Загрузить">><<run UI.saves()>><</button>>
+    <<button "⚙️ Настройки">><<run UI.settings()>><</button>>
+    <<button "👤 Авторы">><<run alert("Starhead, DeepSeek, GPT")>><</button>>
+  </div>
+</div>
+<</nobr>>
+--- КОНЕЦ БЛОКА ---
+
+
+==============================================================================
+ПАССАЖ: StoryCaption (сайдбар)
+==============================================================================
+КУДА: Узел StoryCaption
+------------------------------------------------------------------------------
+--- НАЧАЛО БЛОКА (копируйте всё ниже) ---
+<<nobr>>
+<<if $game.started>>
+<div class="sidebar-content">
+  <div class="logo">LifeSim</div>
+  <div class="datetime">
+    <span class="time-emoji">☀️</span>
+    <span>
+      День <<= $game.time.day >>, <<= $game.time.weekday >>, <<= window.formatTime() >>
+    </span>
+  </div>
+  <div class="money">
+    💵 <<= $game.player.money >>
+  </div>
+
+  <<print window.renderNeedsPanel()>>
+
+  <div class="menu-buttons">
+    <<button "СТАТИСТИКА">><<run alert("Статистика")>><</button>>
+    <<button "ИНВЕНТАРЬ">><<run alert("Инвентарь")>><</button>>
+    <<button "ТЕЛЕФОН">><<run alert("Телефон")>><</button>>
+    <<button "КАРТА">><<run alert("Карта")>><</button>>
+    <<button "КТО РЯДОМ">><<run alert("Кто рядом")>><</button>>
+    <<button "КВЕСТЫ">><<run alert("Квесты")>><</button>>
+    <<button "ЧИТЫ">><<run alert("Читы")>><</button>>
+    <<button "НАСТРОЙКИ">><<run alert("Настройки")>><</button>>
+  </div>
+
+  <div class="sidebar-footer">
+    <<button "❓ FAQ">><<run alert("FAQ")>><</button>>
+  </div>
+</div>
+<</if>>
+<</nobr>>
+--- КОНЕЦ БЛОКА ---
+
+
+==============================================================================
+ПАССАЖ: Шаг 1
+==============================================================================
+КУДА: Узел CharacterCreation
+------------------------------------------------------------------------------
+--- НАЧАЛО БЛОКА (копируйте всё ниже) ---
+<<nobr>>
+<div class="character-creation">
+  <div class="cc-main-title">Создание персонажа</div>
+  <h1 class="cc-step-title">Шаг 1 — Кто вы?</h1>
+
+  <h2>Выбрать стандартный пресет</h2>
+  <div class="cc-presets">
+    <<button "👨 Адам">><<run window.applyAdamPreset()>><<goto "CharacterCreation">><</button>>
+    <<button "👩 Ева">><<run window.applyEvePreset()>><<goto "CharacterCreation">><</button>>
+  </div>
+  <p class="cc-hint">Адам и Ева — стандартные заготовки. После выбора всё можно изменить.</p>
+
+  <h2>Основная информация</h2>
+  <div class="cc-fields">
+    <label>Имя: <<textbox "$game.player.name" $game.player.name>></label>
+    <label>Фамилия: <<textbox "$game.player.surname" $game.player.surname>></label>
+    <label>Возраст: <<numberbox "$game.player.age" $game.player.age 16 99>></label>
+    <label>Пол:
+      <<listbox "$game.player.gender" autoselect>>
+        <<option "Мужчина" "муж">>
+        <<option "Женщина" "жен">>
+        <<option "Другой" "другой">>
+      <</listbox>>
+    </label>
+  </div>
+
+  <div class="cc-buttons">
+    <<link "← Назад в меню">><<goto "Main">><</link>>
+    <<link "Далее →">><<goto "CharacterStep2">><</link>>
+  </div>
+</div>
+<</nobr>>
+--- КОНЕЦ БЛОКА ---
+
+
+==============================================================================
+ПАССАЖ: Шаг 2 Внешность
+==============================================================================
+КУДА: Узел CharacterStep2
+------------------------------------------------------------------------------
+--- НАЧАЛО БЛОКА (копируйте всё ниже) ---
+<<nobr>>
+<div class="character-creation">
+  <div class="cc-main-title">Создание персонажа</div>
+  <h1 class="cc-step-title">Шаг 2 — Внешность</h1>
+
+  <div class="cc-appearance-desc">
+    <<print window.getAppearanceDescription()>>
+  </div>
+
+  <div class="cc-blocks">
+    <div class="cc-block">
+      <h2>Телосложение</h2>
+      <div class="cc-select-row"><span class="cc-slider-label">Рост:</span>
+        <<listbox "$game.player.appearance.height" autoselect>>
+          <<option "Очень низкий" 1>><<option "Низкий" 2>><<option "Средний" 3>>
+          <<option "Высокий" 4>><<option "Очень высокий" 5>>
+        <</listbox>>
+      </div>
+      <div class="cc-select-row"><span class="cc-slider-label">Телосложение:</span>
+        <<listbox "$game.player.appearance.bodyType" autoselect>>
+          <<option "Очень худое" 1>><<option "Худое" 2>><<option "Среднее" 3>>
+          <<option "Плотное" 4>><<option "Полное" 5>>
+        <</listbox>>
+      </div>
+      <div class="cc-select-row"><span class="cc-slider-label">Мускулатура:</span>
+        <<listbox "$game.player.appearance.muscle" autoselect>>
+          <<option "Очень слабая" 1>><<option "Слабая" 2>><<option "Средняя" 3>>
+          <<option "Развитая" 4>><<option "Очень развитая" 5>>
+        <</listbox>>
+      </div>
+      <div class="cc-select-row"><span class="cc-slider-label">Тон кожи:</span>
+        <<listbox "$game.player.appearance.skinTone" autoselect>>
+          <<option "Очень светлая" 1>><<option "Светлая" 2>><<option "Средняя" 3>>
+          <<option "Смуглая" 4>><<option "Тёмная" 5>>
+        <</listbox>>
+      </div>
+      <div class="cc-select-row"><span class="cc-slider-label">Волосы на теле:</span>
+        <<listbox "$game.player.appearance.bodyHair" autoselect>>
+          <<option "Нет" 0>><<option "Редкие" 1>><<option "Средние" 2>><<option "Густые" 3>>
+        <</listbox>>
+      </div>
+    </div>
+
+    <div class="cc-block">
+      <h2>Лицо</h2>
+      <div class="cc-select-row"><span class="cc-slider-label">Форма лица:</span>
+        <<listbox "$game.player.appearance.faceShape" autoselect>>
+          <<option "Круглое" "round">><<option "Овальное" "oval">><<option "Обычное" "average">>
+          <<option "Квадратное" "square">><<option "Вытянутое" "long">>
+        <</listbox>>
+      </div>
+      <div class="cc-select-row"><span class="cc-slider-label">Цвет глаз:</span>
+        <<listbox "$game.player.appearance.eyeColor" autoselect>>
+          <<option "Карие" "brown">><<option "Голубые" "blue">><<option "Зелёные" "green">>
+          <<option "Серые" "gray">><<option "Ореховые" "hazel">><<option "Чёрные" "black">>
+          <<option "Янтарные" "amber">><<option "Фиолетовые" "violet">>
+          <<option "Розовые" "pink">><<option "Разные (гетерохромия)" "hetero">>
+        <</listbox>>
+      </div>
+      <div class="cc-select-row"><span class="cc-slider-label">Разрез глаз:</span>
+        <<listbox "$game.player.appearance.eyeShape" autoselect>>
+          <<option "Миндалевидные" "almond">><<option "Круглые" "round">><<option "С нависшим веком" "hooded">>
+          <<option "Узкие" "narrow">><<option "Широкие" "wide">>
+        <</listbox>>
+      </div>
+      <div class="cc-select-row"><span class="cc-slider-label">Форма носа:</span>
+        <<listbox "$game.player.appearance.noseShape" autoselect>>
+          <<option "Прямой" "straight">><<option "Курносый" "snub">><<option "С горбинкой" "aquiline">>
+          <<option "Широкий" "wide">><<option "Тонкий" "narrow">>
+        <</listbox>>
+      </div>
+      <div class="cc-select-row"><span class="cc-slider-label">Брови:</span>
+        <<listbox "$game.player.appearance.browShape" autoselect>>
+          <<option "Прямые" "straight">><<option "Изогнутые" "arched">><<option "Густые" "thick">><<option "Тонкие" "thin">>
+        <</listbox>>
+      </div>
+      <div class="cc-select-row"><span class="cc-slider-label">Уши:</span>
+        <<listbox "$game.player.appearance.earShape" autoselect>>
+          <<option "Обычные" "normal">><<option "Оттопыренные" "protruding">><<option "Прижатые" "close">>
+          <<option "Крупные" "large">><<option "Маленькие" "small">>
+        <</listbox>>
+      </div>
+    </div>
+
+    <div class="cc-block">
+      <h2>Волосы</h2>
+      <<print window.renderHairSection()>>
+      <<if $game.player.gender == "муж">>
+        <div class="cc-select-row"><span class="cc-slider-label">Растительность на лице:</span>
+          <<listbox "$game.player.appearance.facialHair" autoselect>>
+            <<option "Нет" "none">><<option "Лёгкая щетина" "light_stubble">><<option "Щетина" "stubble">>
+            <<option "Усы" "mustache">><<option "Козлиная бородка" "goatee">><<option "Короткая борода" "short_beard">>
+            <<option "Густая борода" "full_beard">><<option "Борода и усы" "beard_mustache">>
+          <</listbox>>
+        </div>
+      <</if>>
+    </div>
+
+    <div class="cc-block">
+      <h2>Особые приметы</h2>
+      <p class="cc-hint">Нажмите, чтобы включить или выключить.</p>
+      <<print window.renderFeaturesSection()>>
+    </div>
+  </div>
+
+  <p class="cc-hint">Описание обновляется после перехода на следующий шаг и возврата (или по кнопке ниже).</p>
+  <div class="cc-buttons">
+    <<link "🔄 Обновить описание">><<goto "CharacterStep2">><</link>>
+    <<link "← Назад">><<goto "CharacterCreation">><</link>>
+    <<link "Далее →">><<goto "CharacterStep3">><</link>>
+  </div>
+</div>
+<</nobr>>
+--- КОНЕЦ БЛОКА ---
+
+
+==============================================================================
+ПАССАЖ: Шаг 3 Черты
+==============================================================================
+КУДА: Узел CharacterStep3
+------------------------------------------------------------------------------
+--- НАЧАЛО БЛОКА (копируйте всё ниже) ---
+<<nobr>>
+<div class="character-creation">
+  <div class="cc-main-title">Создание персонажа</div>
+  <h1 class="cc-step-title">Шаг 3 — Черты характера</h1>
+  <p class="cc-hint">Положительные черты тратят очки, отрицательные — добавляют. Осталось очков: <strong><<= window.getTraitPoints().left >></strong> из <<= window.TRAIT_BUDGET >>.</p>
+
+  <div class="cc-blocks">
+    <<print window.renderTraits()>>
+  </div>
+
+  <div class="cc-buttons">
+    <<link "← Назад">><<goto "CharacterStep2">><</link>>
+    <<link "Далее →">><<goto "CharacterStep4">><</link>>
+  </div>
+</div>
+<</nobr>>
+--- КОНЕЦ БЛОКА ---
+
+
+==============================================================================
+ПАССАЖ: Шаг 4 Навыки
+==============================================================================
+КУДА: Узел CharacterStep4
+------------------------------------------------------------------------------
+--- НАЧАЛО БЛОКА (копируйте всё ниже) ---
+<<nobr>>
+<div class="character-creation">
+  <div class="cc-main-title">Создание персонажа</div>
+  <h1 class="cc-step-title">Шаг 4 — Навыки</h1>
+  <p class="cc-hint">У всех навыков базовый уровень 1. Свободных очков: <strong><<= window.getSkillPointsLeft() >></strong> из <<= window.SKILL_POINTS >>. В один навык можно вложить максимум 2 очка.</p>
+
+  <div class="cc-block">
+    <h2>Стартовые навыки</h2>
+      <div class="cc-skill-row">
+        <span class="cc-skill-name"><<= window.skillName("cooking") >></span>
+        <span class="cc-skill-controls">
+          <<button "−">><<run window.skillDec("cooking")>><<goto "CharacterStep4">><</button>>
+          <span class="cc-skill-level"><<= $game.player.skills.cooking >></span>
+          <<button "+">><<run window.skillInc("cooking")>><<goto "CharacterStep4">><</button>>
+        </span>
+      </div>
+      <div class="cc-skill-row">
+        <span class="cc-skill-name"><<= window.skillName("cleaning") >></span>
+        <span class="cc-skill-controls">
+          <<button "−">><<run window.skillDec("cleaning")>><<goto "CharacterStep4">><</button>>
+          <span class="cc-skill-level"><<= $game.player.skills.cleaning >></span>
+          <<button "+">><<run window.skillInc("cleaning")>><<goto "CharacterStep4">><</button>>
+        </span>
+      </div>
+      <div class="cc-skill-row">
+        <span class="cc-skill-name"><<= window.skillName("charisma") >></span>
+        <span class="cc-skill-controls">
+          <<button "−">><<run window.skillDec("charisma")>><<goto "CharacterStep4">><</button>>
+          <span class="cc-skill-level"><<= $game.player.skills.charisma >></span>
+          <<button "+">><<run window.skillInc("charisma")>><<goto "CharacterStep4">><</button>>
+        </span>
+      </div>
+      <div class="cc-skill-row">
+        <span class="cc-skill-name"><<= window.skillName("sport") >></span>
+        <span class="cc-skill-controls">
+          <<button "−">><<run window.skillDec("sport")>><<goto "CharacterStep4">><</button>>
+          <span class="cc-skill-level"><<= $game.player.skills.sport >></span>
+          <<button "+">><<run window.skillInc("sport")>><<goto "CharacterStep4">><</button>>
+        </span>
+      </div>
+      <div class="cc-skill-row">
+        <span class="cc-skill-name"><<= window.skillName("intelligence") >></span>
+        <span class="cc-skill-controls">
+          <<button "−">><<run window.skillDec("intelligence")>><<goto "CharacterStep4">><</button>>
+          <span class="cc-skill-level"><<= $game.player.skills.intelligence >></span>
+          <<button "+">><<run window.skillInc("intelligence")>><<goto "CharacterStep4">><</button>>
+        </span>
+      </div>
+      <div class="cc-skill-row">
+        <span class="cc-skill-name"><<= window.skillName("programming") >></span>
+        <span class="cc-skill-controls">
+          <<button "−">><<run window.skillDec("programming")>><<goto "CharacterStep4">><</button>>
+          <span class="cc-skill-level"><<= $game.player.skills.programming >></span>
+          <<button "+">><<run window.skillInc("programming")>><<goto "CharacterStep4">><</button>>
+        </span>
+      </div>
+      <div class="cc-skill-row">
+        <span class="cc-skill-name"><<= window.skillName("art") >></span>
+        <span class="cc-skill-controls">
+          <<button "−">><<run window.skillDec("art")>><<goto "CharacterStep4">><</button>>
+          <span class="cc-skill-level"><<= $game.player.skills.art >></span>
+          <<button "+">><<run window.skillInc("art")>><<goto "CharacterStep4">><</button>>
+        </span>
+      </div>
+      <div class="cc-skill-row">
+        <span class="cc-skill-name"><<= window.skillName("dance") >></span>
+        <span class="cc-skill-controls">
+          <<button "−">><<run window.skillDec("dance")>><<goto "CharacterStep4">><</button>>
+          <span class="cc-skill-level"><<= $game.player.skills.dance >></span>
+          <<button "+">><<run window.skillInc("dance")>><<goto "CharacterStep4">><</button>>
+        </span>
+      </div>
+      <div class="cc-skill-row">
+        <span class="cc-skill-name"><<= window.skillName("repair") >></span>
+        <span class="cc-skill-controls">
+          <<button "−">><<run window.skillDec("repair")>><<goto "CharacterStep4">><</button>>
+          <span class="cc-skill-level"><<= $game.player.skills.repair >></span>
+          <<button "+">><<run window.skillInc("repair")>><<goto "CharacterStep4">><</button>>
+        </span>
+      </div>
+      <div class="cc-skill-row">
+        <span class="cc-skill-name"><<= window.skillName("gardening") >></span>
+        <span class="cc-skill-controls">
+          <<button "−">><<run window.skillDec("gardening")>><<goto "CharacterStep4">><</button>>
+          <span class="cc-skill-level"><<= $game.player.skills.gardening >></span>
+          <<button "+">><<run window.skillInc("gardening")>><<goto "CharacterStep4">><</button>>
+        </span>
+      </div>
+  </div>
+
+  <div class="cc-buttons">
+    <<link "← Назад">><<goto "CharacterStep3">><</link>>
+    <<link "Далее →">><<goto "CharacterStep5">><</link>>
+  </div>
+</div>
+<</nobr>>
+--- КОНЕЦ БЛОКА ---
+
+
+==============================================================================
+ПАССАЖ: Шаг 5 Жильё
+==============================================================================
+КУДА: Узел CharacterStep5
+------------------------------------------------------------------------------
+--- НАЧАЛО БЛОКА (копируйте всё ниже) ---
+<<nobr>>
+<div class="character-creation">
+  <div class="cc-main-title">Создание персонажа</div>
+  <h1 class="cc-step-title">Шаг 5 — Выбор жилья</h1>
+  <p class="cc-hint">Стартовые деньги: <strong>$<<= $game.player.money >></strong>. При переезде сразу списывается первый месяц аренды.</p>
+
+  <<print window.renderHousing()>>
+
+  <div class="cc-buttons">
+    <<link "← Назад">><<goto "CharacterStep4">><</link>>
+    <<link "Далее →">><<goto "CharacterStep6">><</link>>
+  </div>
+</div>
+<</nobr>>
+--- КОНЕЦ БЛОКА ---
+
+
+==============================================================================
+ПАССАЖ: Шаг 6 Подтверждение
+==============================================================================
+КУДА: Узел CharacterStep6
+------------------------------------------------------------------------------
+--- НАЧАЛО БЛОКА (копируйте всё ниже) ---
+<<nobr>>
+<div class="character-creation">
+  <div class="cc-main-title">Создание персонажа</div>
+  <h1 class="cc-step-title">Шаг 6 — Подтверждение</h1>
+
+  <div class="cc-block cc-summary">
+    <h2>Вы смотрите в зеркало…</h2>
+    <p><strong><<= $game.player.name >><<if $game.player.surname>> <<= $game.player.surname>><</if>></strong>, <<= $game.player.age >> г., <<= $game.player.gender === "муж" ? "мужчина" : $game.player.gender === "жен" ? "женщина" : "другой пол" >>.</p>
+    <p><<= window.getAppearanceDescription() >></p>
+    <p><strong>Черты:</strong> <<print window.getTraitsList()>></p>
+    <p><strong>Жильё:</strong> <<= window.getHousing($game.player.housing) ? window.getHousing($game.player.housing).name : "не выбрано" >> — аренда $<<= window.getHousing($game.player.housing) ? window.getHousing($game.player.housing).rent : 0 >>/мес.</p>
+    <p><strong>Деньги после оплаты:</strong> $<<= $game.player.money - (window.getHousing($game.player.housing) ? window.getHousing($game.player.housing).rent : 0) >></p>
+  </div>
+
+  <div class="cc-buttons">
+    <<link "← Назад">><<goto "CharacterStep5">><</link>>
+    <<if $game.player.housing>><<button "✅ Начать жизнь">><<run window.finishCharacterCreation()>><<goto "Home">><</button>><<else>><p class="cc-hint">Сначала выберите жильё на предыдущем шаге.</p><</if>>
+  </div>
+</div>
+<</nobr>>
+--- КОНЕЦ БЛОКА ---
+
+
+==============================================================================
+ПАССАЖ: Home (игра, навигация по комнатам жилья)
+==============================================================================
+КУДА: Узел Home
+------------------------------------------------------------------------------
+--- НАЧАЛО БЛОКА (копируйте всё ниже) ---
+<<nobr>>
+<<set _roomData = window.getRoomData($game.room)>>
+<div class="location-header">
+  <h1 class="location-title"><<= _roomData.name >></h1>
+  <div class="location-description">
+    <<= _roomData.description >>
+    <span class="location-time">Сейчас <<= window.formatTime() >>.</span>
+  </div>
+</div>
+<section class="game-section actions-section">
+  <h2>🎯 Действия</h2>
+  <div class="actions-list">
+    <<if $game.room == "living_room">>
+      <<link "📺 Смотреть телевизор (до +25 досуга, 1 час)">><<run advanceTime(60, ['fun'])>><<set $game.player.needs.fun = Math.min(100, $game.player.needs.fun + 25)>><<run finishAction()>><<goto "Home">><</link>>
+      <<link "📱 Поговорить по телефону (до +7 общения, 10 мин)">><<run advanceTime(10, ['social'])>><<set $game.player.needs.social = Math.min(100, $game.player.needs.social + 7)>><<run finishAction()>><<goto "Home">><</link>>
+      <<link "🗣️ Живое общение (до +25 общения, до +5 досуга, 30 мин)">><<run advanceTime(30, ['social', 'fun'])>><<set $game.player.needs.social = Math.min(100, $game.player.needs.social + 25)>><<set $game.player.needs.fun = Math.min(100, $game.player.needs.fun + 5)>><<run finishAction()>><<goto "Home">><</link>>
+    <</if>>
+    <<if $game.room == "kitchen">>
+      <<link "🍳 Готовить (-5 энергии, 1 час)">><<run advanceTime(60, ['energy'])>><<set $game.player.needs.energy = Math.max(0, $game.player.needs.energy - 5)>><<run finishAction()>><<goto "Home">><</link>>
+      <<link "🍔 Поесть (до +50 сытости, 30 мин)">><<run advanceTime(30, ['satiety'])>><<set $game.player.needs.satiety = Math.min(100, $game.player.needs.satiety + 50)>><<run finishAction()>><<goto "Home">><</link>>
+    <</if>>
+    <<if $game.room == "bedroom">>
+      <<link "😴 Спать 8 часов">><<set $game.player.sleeping = true>><<run advanceTime(480)>><<set $game.player.sleeping = false>><<run finishAction()>><<goto "Home">><</link>>
+    <</if>>
+    <<if $game.room == "bathroom">>
+      <<link "🚿 Принять душ (гигиена до 100, 10 мин)">><<run advanceTime(10, ['hygiene'])>><<set $game.player.needs.hygiene = 100>><<run finishAction()>><<goto "Home">><</link>>
+      <<link "🚽 Сходить в туалет (до 100, 2 мин)">><<run advanceTime(2, ['bladder'])>><<set $game.player.needs.bladder = 100>><<run finishAction()>><<goto "Home">><</link>>
+    <</if>>
+    <<if $game.room == "gym">>
+      <<link "🏋️ Спорт (до +15 досуга, -15 энергии, -5 сытости, 1 час)">><<run advanceTime(60, ['fun', 'energy', 'satiety'])>><<set $game.player.needs.fun = Math.min(100, $game.player.needs.fun + 15)>><<set $game.player.needs.energy = Math.max(0, $game.player.needs.energy - 15)>><<set $game.player.needs.satiety = Math.max(0, $game.player.needs.satiety - 5)>><<run finishAction()>><<goto "Home">><</link>>
+    <</if>>
+    <<if $game.room == "office">>
+      <<link "💻 Программировать (-10 энергии, 2 часа)">><<run advanceTime(120, ['energy'])>><<set $game.player.needs.energy = Math.max(0, $game.player.needs.energy - 10)>><<run finishAction()>><<goto "Home">><</link>>
+    <</if>>
+    <<if $game.room == "workshop">>
+      <<link "🎨 Рисовать (до +20 досуга, -3 энергии, 1 час)">><<run advanceTime(60, ['fun', 'energy'])>><<set $game.player.needs.fun = Math.min(100, $game.player.needs.fun + 20)>><<set $game.player.needs.energy = Math.max(0, $game.player.needs.energy - 3)>><<run finishAction()>><<goto "Home">><</link>>
+    <</if>>
+    <<if $game.room == "garage">>
+      <p>Здесь пока пусто. Позже появится транспорт и инструменты.</p>
+    <</if>>
+    <<if $game.room == "hallway">>
+      <p>Вы в прихожей. Отсюда можно будет выйти на улицу.</p>
+    <</if>>
+    <<if $game.room == "terrace">>
+      <p>Терраса. Свежий воздух и растения.</p>
+    <</if>>
+  </div>
+</section>
+<section class="game-section navigation-section">
+  <h2>🚪 Перейти в комнату</h2>
+  <div class="room-nav">
+    <<if $game.room != "living_room" && window.roomAvailable("living_room")>><<link "🛋️ Гостиная (1 мин)">><<run advanceTime(1)>><<run finishAction()>><<set $game.room = "living_room">><<goto "Home">><</link>><</if>>
+    <<if $game.room != "kitchen" && window.roomAvailable("kitchen")>><<link "🍳 Кухня (1 мин)">><<run advanceTime(1)>><<run finishAction()>><<set $game.room = "kitchen">><<goto "Home">><</link>><</if>>
+    <<if $game.room != "bedroom" && window.roomAvailable("bedroom")>><<link "🛏️ Спальня (1 мин)">><<run advanceTime(1)>><<run finishAction()>><<set $game.room = "bedroom">><<goto "Home">><</link>><</if>>
+    <<if $game.room != "bathroom" && window.roomAvailable("bathroom")>><<link "🚿 Ванная (1 мин)">><<run advanceTime(1)>><<run finishAction()>><<set $game.room = "bathroom">><<goto "Home">><</link>><</if>>
+    <<if $game.room != "gym" && window.roomAvailable("gym")>><<link "💪 Спортзал (1 мин)">><<run advanceTime(1)>><<run finishAction()>><<set $game.room = "gym">><<goto "Home">><</link>><</if>>
+    <<if $game.room != "office" && window.roomAvailable("office")>><<link "📚 Кабинет (1 мин)">><<run advanceTime(1)>><<run finishAction()>><<set $game.room = "office">><<goto "Home">><</link>><</if>>
+    <<if $game.room != "workshop" && window.roomAvailable("workshop")>><<link "🎨 Мастерская (1 мин)">><<run advanceTime(1)>><<run finishAction()>><<set $game.room = "workshop">><<goto "Home">><</link>><</if>>
+    <<if $game.room != "garage" && window.roomAvailable("garage")>><<link "🚗 Гараж (1 мин)">><<run advanceTime(1)>><<run finishAction()>><<set $game.room = "garage">><<goto "Home">><</link>><</if>>
+    <<if $game.room != "hallway" && window.roomAvailable("hallway")>><<link "🚪 Прихожая (1 мин)">><<run advanceTime(1)>><<run finishAction()>><<set $game.room = "hallway">><<goto "Home">><</link>><</if>>
+    <<if $game.room != "terrace" && window.roomAvailable("terrace")>><<link "🌿 Терраса (1 мин)">><<run advanceTime(1)>><<run finishAction()>><<set $game.room = "terrace">><<goto "Home">><</link>><</if>>
+  </div>
+</section>
+<section class="game-section cheats-section">
+  <h2>🧪 Читы для тестирования</h2>
+  <div class="actions-list">
+    <<link "💀 Установить все потребности на 0">><<set $game.player.needs.energy = 0>><<set $game.player.needs.satiety = 0>><<set $game.player.needs.hygiene = 0>><<set $game.player.needs.social = 0>><<set $game.player.needs.fun = 0>><<set $game.player.needs.bladder = 0>><<run updateMood()>><<goto "Home">><</link>>
+    <<link "✨ Установить все потребности на 100">><<set $game.player.needs.energy = 100>><<set $game.player.needs.satiety = 100>><<set $game.player.needs.hygiene = 100>><<set $game.player.needs.social = 100>><<set $game.player.needs.fun = 100>><<set $game.player.needs.bladder = 100>><<run updateMood()>><<goto "Home">><</link>>
+  </div>
+</section>
+<</nobr>>
+--- КОНЕЦ БЛОКА ---
+
