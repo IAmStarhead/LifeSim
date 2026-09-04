@@ -370,6 +370,23 @@ body {
   border-radius: 7px;
   font-size: 0.95em; cursor: default;
 }
+/* Цветные мудлеты: по тону состояния */
+.moodlet-chip.tone-good {
+  background: rgba(63,185,107,0.18);
+  border-color: rgba(63,185,107,0.55);
+}
+.moodlet-chip.tone-bad {
+  background: rgba(224,82,82,0.20);
+  border-color: rgba(224,82,82,0.6);
+}
+.moodlet-chip.tone-warn {
+  background: rgba(217,200,74,0.18);
+  border-color: rgba(217,200,74,0.55);
+}
+.moodlet-chip.tone-neutral {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.28);
+}
 
 /* Кнопки меню */
 #ui-bar .menu-buttons {
@@ -1632,6 +1649,7 @@ window.migrateGame = function() {
   if (typeof g.player.debt !== "number") g.player.debt = 0;        // долг больнице/счетам 0.0.4.6
   if (!g.player.creations) g.player.creations = {};               // созданные произведения 0.0.4.7
   if (!Array.isArray(g.player.works)) g.player.works = [];
+  if (!g.player.projects || typeof g.player.projects !== "object") g.player.projects = {}; // поэтапные проекты 0.0.4.8
 };
 jQuery(document).on(":passagestart", function(){ try { window.migrateGame(); } catch(e){} });
 // Миграция старых сейвов при загрузке
@@ -1841,7 +1859,7 @@ window.applyQuality = function(actionId, skillId) {
 // В отличие от практики, это «долгая» деятельность с готовым результатом:
 // даём качество, мудлет завершённой работы и (пока) просто копим счётчик.
 window.CREATION_KIND = {
-  make_art:     { key: "art",     skill: "art",         noun: "арт",       item: "artWorks" },
+  make_art:     { key: "art",     skill: "art",         noun: "рисунок",   item: "artWorks" },
   make_program: { key: "program", skill: "programming", noun: "программа", item: "programs" },
   make_game:    { key: "program", skill: "programming", noun: "игра",      item: "games" },
   write_book:   { key: "book",    skill: "writing",     noun: "книга",     item: "books" }
@@ -1861,6 +1879,165 @@ window.finishCreation = function(actionId, skillId) {
   return q;
 };
 
+/* ===========================================================================
+   0.0.4.8 — ПОЭТАПНЫЕ ПРОЕКТЫ (рисунок / программа / игра / книга)
+   Над проектом работают много подходов по 10 минут. Отдельно копятся
+   ПРОГРЕСС (сделано, синяя шкала) и КАЧЕСТВО (зависит от навыка, золотая
+   шкала). Когда прогресс 100% — проект готов: можно опубликовать, удалить
+   или отложить (решить позже). Проекты раздельные по типам.
+   =========================================================================== */
+window.PROJECT_TYPES = {
+  art:     { name: "рисунок",   acc: "рисунок",   emoji: "🖼️", skill: "art",         hub: "ArtStudio", sessions: 12 },
+  program: { name: "программа", acc: "программу", emoji: "⌨️", skill: "programming", hub: "CodeDesk",  sessions: 24 },
+  game:    { name: "игра",      acc: "игру",      emoji: "🎮", skill: "programming", hub: "CodeDesk",  sessions: 30 },
+  book:    { name: "книга",     acc: "книгу",     emoji: "📖", skill: "writing",     hub: "CodeDesk",  sessions: 30 }
+};
+
+window._projects = function(){
+  var p = State.variables.game.player;
+  if (!p.projects || typeof p.projects !== "object") { p.projects = {}; }
+  return p.projects;
+};
+// Получить (или создать) текущий проект типа
+window.getProject = function(type){
+  var pr = window._projects();
+  if (!pr[type]) pr[type] = { progress: 0, quality: 0, sessions: 0, done: false };
+  return pr[type];
+};
+window.hasProject = function(type){
+  var pr = window._projects();
+  return !!(pr[type] && (pr[type].sessions > 0 || pr[type].done));
+};
+
+// Один подход к проекту: 10 минут, +прогресс, +качество (от навыка), немного опыта.
+window.workOnProject = function(type){
+  window.migrateGame();
+  var g = State.variables.game, p = g.player, n = p.needs;
+  var cfg = window.PROJECT_TYPES[type];
+  if (!cfg) { window.toast("Неизвестный проект.", "warn"); return; }
+  var pr = window.getProject(type);
+  if (pr.done) { window.renderProject(); return; }
+
+  // время 10 минут и лёгкая трата сил
+  advanceTime(10, ["fun"]);
+  n.energy = Math.max(0, n.energy - 2);
+  n.fun    = Math.min(100, Math.max(0, n.fun + 1));
+
+  // прогресс: ровная доля за подход
+  pr.sessions += 1;
+  pr.progress = Math.min(100, Math.round(pr.sessions / cfg.sessions * 100));
+
+  // качество: зависит от уровня навыка (ниже навык — медленнее растёт) + удача
+  var skillLvl = window.skillLevel(cfg.skill);
+  var mastery = (Math.max(1, Math.min(window.SKILL_MAX_LEVEL, skillLvl)) - 1) / (window.SKILL_MAX_LEVEL - 1);
+  var gain = 2.2 + mastery * 3.2 + window._qualityRoll() * 2.2;
+  // черта «творческий» помогает рисунку и книге
+  if (window.hasTrait && window.hasTrait("creative") && (type === "art" || type === "book")) gain *= 1.15;
+  pr.quality = Math.min(100, Math.round((pr.quality + gain) * 10) / 10);
+
+  // небольшой опыт навыка (без суточного лимита — это проект)
+  window._applySkillXp(cfg.skill, 1);
+
+  if (pr.progress >= 100) {
+    pr.done = true;
+    window.toast("✅ " + cfg.emoji + " " + cap(cfg.name) + " готов! Решите: опубликовать, удалить или отложить.", "good");
+  } else {
+    window.toast(cfg.emoji + " Ещё немного поработали: прогресс " + pr.progress + "%, качество " + Math.round(pr.quality) + "%.", "info");
+  }
+  window.finishAction();
+  window.renderProject();
+};
+function cap(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
+
+// Готовность -> звёзды качества 1..5
+window.projectStars = function(q){
+  if (q >= 85) return 5;
+  if (q >= 68) return 4;
+  if (q >= 50) return 3;
+  if (q >= 33) return 2;
+  return 1;
+};
+
+window.publishProject = function(type){
+  var cfg = window.PROJECT_TYPES[type];
+  var pr = window.getProject(type);
+  if (!pr.done) return;
+  var stars = window.projectStars(pr.quality);
+  // пока — признание (настроение/мудлет) и счётчик; деньги прикрутим с экономикой
+  var p = State.variables.game.player;
+  if (!p.creations) p.creations = {};
+  var key = type === "art" ? "artWorks" : (type === "book" ? "books" : (type === "game" ? "games" : "programs"));
+  p.creations[key] = (p.creations[key] || 0) + 1;
+  if (!Array.isArray(p.works)) p.works = [];
+  p.works.push({ kind: key, quality: stars, day: g_day() });
+  window.addMoodlet(stars >= 4 ? "published" : "finished_work");
+  window.toast("🚀 Вы опубликовали " + cfg.acc + "! Качество: " + window.qualityStars(stars)
+    + (stars >= 4 ? " Публика в восторге!" : " Сойдёт для начала."), stars >= 4 ? "good" : "info");
+  // сброс проекта типа
+  window._projects()[type] = { progress: 0, quality: 0, sessions: 0, done: false };
+  window.finishAction();
+  Engine.play(cfg.hub);
+};
+function g_day(){ var t = State.variables.game.time; return t && t.day; }
+
+window.deleteProject = function(type){
+  window._projects()[type] = { progress: 0, quality: 0, sessions: 0, done: false };
+  window.toast("🗑️ Вы забросили и удалили черновик. Бывает!", "warn");
+  window.finishAction();
+  window.renderProject();
+};
+
+// Текущее имя проекта для заголовка пассажа
+window.projectTitle = function(type){
+  var cfg = window.PROJECT_TYPES[type] || { emoji: "📦", name: "проект" };
+  var pr = window.getProject(type);
+  if (pr.done) return cfg.emoji + " " + cap(cfg.name) + " — готово!";
+  if (pr.sessions > 0) return cfg.emoji + " " + cap(cfg.name) + " — в работе";
+  return cfg.emoji + " " + cap(cfg.name);
+};
+
+// Открыть пассаж работы над проектом нужного типа
+window.openProject = function(type){
+  window.migrateGame();
+  State.variables.projectType = type;
+  window.getProject(type);
+  Engine.play("ProjectWork");
+};
+// Перерисовать пассаж проекта (после подхода/удаления)
+window.renderProject = function(){ Engine.play("ProjectWork"); };
+// Вернуться в «хаб» навыка (мастерскую/стол) текущего типа проекта
+window.goProjectHub = function(){
+  var t = State.variables.projectType;
+  var cfg = window.PROJECT_TYPES[t];
+  Engine.play(cfg ? cfg.hub : "Home");
+};
+
+// Рендер тела пассажа проекта (шкалы; кнопки — макросами в пассаже)
+window.projectBody = function(type){
+  var cfg = window.PROJECT_TYPES[type];
+  var pr = window.getProject(type);
+  var p = Math.round(pr.progress), q = Math.round(pr.quality);
+  function bar(label, val, color){
+    return '<div style="margin:12px 0;text-align:left;">'
+      + '<div style="display:flex;justify-content:space-between;font-size:13px;color:#9aa4c0;margin-bottom:4px;">'
+      + '<span>'+label+'</span><span>'+val+'%</span></div>'
+      + '<div style="background:rgba(255,255,255,0.08);border-radius:8px;height:14px;overflow:hidden;">'
+      + '<div style="width:'+val+'%;height:100%;background:'+color+';border-radius:8px;"></div>'
+      + '</div></div>';
+  }
+  var h = '<div style="text-align:left;">';
+  h += '<p class="cc-hint">Один подход — 10 минут. Синяя шкала — сколько уже сделано; '
+     + 'золотая — качество: оно зависит от навыка «'+window.skillName(cfg.skill)+'», чем навык выше, тем быстрее растёт качество.</p>';
+  h += bar("📊 Прогресс", p, "#3f8fd6");
+  h += bar("⭐ Качество", q, "#e0b341");
+  if (pr.done) {
+    h += '<p style="color:#7fd39a;margin-top:6px;">Работа завершена! Итоговое качество: '+window.qualityStars(window.projectStars(q))+'</p>';
+  } else {
+    h += '<p style="color:#9aa4c0;margin-top:6px;">Подходов: '+pr.sessions+' из ~'+cfg.sessions+'.</p>';
+  }
+  h += '</div>';
+  return h;
+};
 /* ===========================================================================
    0.0.4.6 — БОЛЬНИЦА И ТЯЖЁЛЫЕ ТРАВМЫ
    sendToHospital(reason): проматывает сутки лечения, восстанавливает
@@ -1994,21 +2171,21 @@ window.getJob = function(id) {
    Текущая эмоция = эмоция самого сильного активного мудлета, иначе из настроения.
    =========================================================================== */
 window.EMOTIONS = {
-  neutral:   { icon: "😐", m: "Спокоен",       f: "Спокойна" },
-  happy:     { icon: "🙂", m: "Доволен",       f: "Довольна" },
-  cheerful:  { icon: "😄", m: "Весел",         f: "Весела" },
-  playful:   { icon: "🤸", m: "Игрив",         f: "Игрива" },
-  inspired:  { icon: "💡", m: "Вдохновлён",    f: "Вдохновлена" },
-  focused:   { icon: "🎯", m: "Сосредоточен",  f: "Сосредоточена" },
-  confident: { icon: "😎", m: "Уверен",        f: "Уверена" },
-  flirty:    { icon: "😏", m: "Кокетлив",      f: "Кокетлива" },
-  sad:       { icon: "😢", m: "Расстроен",     f: "Расстроена" },
-  angry:     { icon: "😠", m: "Зол",           f: "Зла" },
-  tense:     { icon: "😰", m: "Напряжён",      f: "Напряжена" },
-  embarrassed:{ icon: "😳", m: "Смущён",       f: "Смущена" },
-  uncomfortable:{ icon: "😣", m: "Раздражён",  f: "Раздражена" },
-  exhausted: { icon: "😵", m: "Измотан",       f: "Измотана" },
-  drunk:     { icon: "🍺", m: "Пьян",          f: "Пьяна" }
+  neutral:   { icon: "😐", m: "Вы спокойны",       f: "Вы спокойны" },
+  happy:     { icon: "🙂", m: "Вы довольны",       f: "Вы довольны" },
+  cheerful:  { icon: "😄", m: "Вам весело",        f: "Вам весело" },
+  playful:   { icon: "🤸", m: "Вы игривы",         f: "Вы игривы" },
+  inspired:  { icon: "💡", m: "Вы вдохновлены",    f: "Вы вдохновлены" },
+  focused:   { icon: "🎯", m: "Вы сосредоточены",  f: "Вы сосредоточены" },
+  confident: { icon: "😎", m: "Вы уверены",        f: "Вы уверены" },
+  flirty:    { icon: "😏", m: "Вы кокетливы",      f: "Вы кокетливы" },
+  sad:       { icon: "😢", m: "Вы расстроены",     f: "Вы расстроены" },
+  angry:     { icon: "😠", m: "Вы злитесь",        f: "Вы злитесь" },
+  tense:     { icon: "😰", m: "Вы напряжены",      f: "Вы напряжены" },
+  embarrassed:{ icon: "😳", m: "Вы смущены",       f: "Вы смущены" },
+  uncomfortable:{ icon: "😣", m: "Вы раздражены",  f: "Вы раздражены" },
+  exhausted: { icon: "😵", m: "Вы измотаны",       f: "Вы измотаны" },
+  drunk:     { icon: "🍺", m: "Вы пьяны",          f: "Вы пьяны" }
 };
 // Название эмоции с учётом пола персонажа (короткое прилагательное-состояние)
 window.emotionName = function(key) {
@@ -2018,53 +2195,56 @@ window.emotionName = function(key) {
 };
 // Каталог мудлетов (label — бесполое состояние, чтобы не зависеть от пола)
 window.MOODLET_DEFS = {
+  // tone: good (зелёный) / neutral (белый) / warn (жёлтый, неприятно но не ужас) / bad (красный)
   // --- негативные от потребностей ---
-  hungry:      { icon: "🍽️", label: "Голод",           emotion: "uncomfortable", weight: 25, mood: -12 },
-  starving:    { icon: "🥺", label: "Сильный голод",   emotion: "uncomfortable", weight: 45, mood: -22 },
-  sleepy:      { icon: "😴", label: "Хочется спать",    emotion: "tense",         weight: 22, mood: -10 },
-  exhausted:   { icon: "🥱", label: "Усталость",        emotion: "exhausted",     weight: 45, mood: -22 },
-  dirty:       { icon: "🧼", label: "Грязно",           emotion: "uncomfortable", weight: 16, mood: -7 },
-  lonely:      { icon: "😔", label: "Одиночество",      emotion: "sad",           weight: 18, mood: -9 },
-  bored:       { icon: "📺", label: "Скука",            emotion: "tense",         weight: 14, mood: -6 },
-  bladder:     { icon: "🚻", label: "Нужно в туалет",   emotion: "uncomfortable", weight: 24, mood: -12 },
+  hungry:      { icon: "🍽️", label: "Голод",           emotion: "uncomfortable", weight: 25, mood: -12, tone: "bad" },
+  starving:    { icon: "🥺", label: "Сильный голод",   emotion: "uncomfortable", weight: 45, mood: -22, tone: "bad" },
+  sleepy:      { icon: "😴", label: "Хочется спать",    emotion: "tense",         weight: 22, mood: -10, tone: "warn" },
+  exhausted:   { icon: "🥱", label: "Усталость",        emotion: "exhausted",     weight: 45, mood: -22, tone: "bad" },
+  dirty:       { icon: "🧼", label: "Грязно",           emotion: "uncomfortable", weight: 16, mood: -7,  tone: "warn" },
+  lonely:      { icon: "😔", label: "Одиночество",      emotion: "sad",           weight: 18, mood: -9,  tone: "warn" },
+  bored:       { icon: "📺", label: "Скука",            emotion: "tense",         weight: 14, mood: -6,  tone: "warn" },
+  bladder:     { icon: "🚻", label: "Нужно в туалет",   emotion: "uncomfortable", weight: 24, mood: -12, tone: "bad" },
   // --- позитивные ---
-  well_fed:    { icon: "🍲", label: "Сытость",          emotion: "happy",         weight: 18, mood: 8,  mins: 300 },
-  rested:      { icon: "🛏️", label: "Крепкий сон",      emotion: "happy",         weight: 22, mood: 10, mins: 480 },
-  clean:       { icon: "🚿", label: "Свежесть",         emotion: "happy",         weight: 14, mood: 6,  mins: 300 },
-  energetic:   { icon: "⚡", label: "Бодрость",        emotion: "confident",     weight: 16, mood: 8,  mins: 360 },
-  inspired:    { icon: "💡", label: "Вдохновение",      emotion: "inspired",      weight: 20, mood: 8,  mins: 240 },
-  good_talk:   { icon: "💬", label: "Приятная беседа",  emotion: "happy",         weight: 14, mood: 7,  mins: 240 },
-  proud:       { icon: "🏆", label: "Гордость",         emotion: "confident",     weight: 24, mood: 12, mins: 480 },
-  tipsy_good:  { icon: "💰", label: "Удачная смена",    emotion: "happy",         weight: 20, mood: 10, mins: 360 },
-  back_strain: { icon: "🤕", label: "Болит спина",      emotion: "uncomfortable", weight: 30, mood: -12, permanent: true, injury: true },
+  well_fed:    { icon: "🍲", label: "Сытость",          emotion: "happy",         weight: 18, mood: 8,  tone: "good", mins: 300 },
+  rested:      { icon: "🛏️", label: "Крепкий сон",      emotion: "happy",         weight: 22, mood: 10, tone: "good", mins: 480 },
+  clean:       { icon: "🚿", label: "Свежесть",         emotion: "happy",         weight: 14, mood: 6,  tone: "good", mins: 300 },
+  energetic:   { icon: "⚡", label: "Бодрость",        emotion: "confident",     weight: 16, mood: 8,  tone: "good", mins: 360 },
+  inspired:    { icon: "💡", label: "Вдохновение",      emotion: "inspired",      weight: 20, mood: 8,  tone: "good", mins: 240 },
+  good_talk:   { icon: "💬", label: "Приятная беседа",  emotion: "happy",         weight: 14, mood: 7,  tone: "good", mins: 240 },
+  proud:       { icon: "🏆", label: "Гордость",         emotion: "confident",     weight: 24, mood: 12, tone: "good", mins: 480 },
+  tipsy_good:  { icon: "💰", label: "Удачная смена",    emotion: "happy",         weight: 20, mood: 10, tone: "good", mins: 360 },
+  back_strain: { icon: "🤕", label: "Болит спина",      emotion: "uncomfortable", weight: 30, mood: -12, tone: "bad", permanent: true, injury: true },
   // --- события на работе ---
-  shift_done:  { icon: "💼", label: "Трудовой день",    emotion: "exhausted",     weight: 12, mood: -4,  mins: 300 },
-  caught_thief:{ icon: "🛡️", label: "Задержал вора",    emotion: "confident",     weight: 22, mood: 12, mins: 360 },
-  theft_loss:  { icon: "💸", label: "Вычли из зарплаты",emotion: "sad",           weight: 24, mood: -14, mins: 300 },
-  big_tips:    { icon: "🪙", label: "Щедрые чаевые",    emotion: "cheerful",      weight: 22, mood: 12, mins: 360 },
-  tray_dropped:{ icon: "🤦", label: "Уронил поднос",    emotion: "embarrassed",   weight: 22, mood: -12, mins: 240 },
-  dish_praised:{ icon: "🍽️", label: "Блюдо похвалили", emotion: "confident",     weight: 22, mood: 12, mins: 360 },
-  burned_hand: { icon: "♨️", label: "Обжёгся",          emotion: "uncomfortable", weight: 24, mood: -10, permanent: true, injury: true },
-  early_unload:{ icon: "💪", label: "Сделал норму",     emotion: "confident",     weight: 22, mood: 12, mins: 360 },
+  shift_done:  { icon: "💼", label: "Трудовой день",    emotion: "exhausted",     weight: 12, mood: -4,  tone: "neutral", mins: 300 },
+  caught_thief:{ icon: "🛡️", label: "Задержал вора",    emotion: "confident",     weight: 22, mood: 12, tone: "good", mins: 360 },
+  theft_loss:  { icon: "💸", label: "Вычли из зарплаты",emotion: "sad",           weight: 24, mood: -14, tone: "bad", mins: 300 },
+  big_tips:    { icon: "🪙", label: "Щедрые чаевые",    emotion: "cheerful",      weight: 22, mood: 12, tone: "good", mins: 360 },
+  tray_dropped:{ icon: "🤦", label: "Уронил поднос",    emotion: "embarrassed",   weight: 22, mood: -12, tone: "warn", mins: 240 },
+  dish_praised:{ icon: "🍽️", label: "Блюдо похвалили", emotion: "confident",     weight: 22, mood: 12, tone: "good", mins: 360 },
+  burned_hand: { icon: "♨️", label: "Обжёгся",          emotion: "uncomfortable", weight: 24, mood: -10, tone: "bad", permanent: true, injury: true },
+  early_unload:{ icon: "💪", label: "Сделал норму",     emotion: "confident",     weight: 22, mood: 12, tone: "good", mins: 360 },
   // --- досуг/быт ---
-  amused:      { icon: "📺", label: "Отдых у телевизора",emotion: "cheerful",     weight: 12, mood: 6,  mins: 180 },
+  amused:      { icon: "📺", label: "Отдых у телевизора",emotion: "cheerful",     weight: 12, mood: 6,  tone: "good", mins: 180 },
   // --- качество занятий (0.0.4.4+) ---
-  masterpiece: { icon: "🌟", label: "Шедевр!",          emotion: "cheerful",      weight: 26, mood: 14, mins: 480 },
-  great_work:  { icon: "✨", label: "Отличный результат",emotion: "confident",   weight: 20, mood: 10, mins: 360 },
-  good_work:   { icon: "👍", label: "Хороший результат",emotion: "happy",        weight: 15, mood: 7,  mins: 300 },
-  poor_work:   { icon: "😬", label: "Комом",            emotion: "sad",           weight: 14, mood: -6, mins: 180 },
+  masterpiece: { icon: "🌟", label: "Шедевр!",          emotion: "cheerful",      weight: 26, mood: 14, tone: "good", mins: 480 },
+  great_work:  { icon: "✨", label: "Отличный результат",emotion: "confident",   weight: 20, mood: 10, tone: "good", mins: 360 },
+  good_work:   { icon: "👍", label: "Хороший результат",emotion: "happy",        weight: 15, mood: 7,  tone: "good", mins: 300 },
+  poor_work:   { icon: "😬", label: "Комом",            emotion: "sad",           weight: 14, mood: -6,  tone: "warn", mins: 180 },
   // --- срывы / травмы (редкий слой, выше на низком навыке) ---
-  muscle_pull: { icon: "🤕", label: "Потянул мышцу",    emotion: "uncomfortable", weight: 32, mood: -14, permanent: true, injury: true },
-  cut_finger:  { icon: "🩹", label: "Порезал палец",    emotion: "uncomfortable", weight: 22, mood: -8,  permanent: true, injury: true },
-  minor_burn:  { icon: "♨️", label: "Обжёгся о плиту",  emotion: "uncomfortable", weight: 24, mood: -10, permanent: true, injury: true },
-  code_bug:    { icon: "🐛", label: "Баг в коде",       emotion: "tense",         weight: 18, mood: -8,  mins: 240 },
-  art_mess:    { icon: "🎨", label: "Вышла каляка-маляка",emotion: "embarrassed", weight: 16, mood: -7,  mins: 180 },
+  muscle_pull: { icon: "🤕", label: "Потянул мышцу",    emotion: "uncomfortable", weight: 32, mood: -14, tone: "bad", permanent: true, injury: true },
+  cut_finger:  { icon: "🩹", label: "Порезал палец",    emotion: "uncomfortable", weight: 22, mood: -8,  tone: "bad", permanent: true, injury: true },
+  minor_burn:  { icon: "♨️", label: "Обжёгся о плиту",  emotion: "uncomfortable", weight: 24, mood: -10, tone: "bad", permanent: true, injury: true },
+  code_bug:    { icon: "🐛", label: "Баг в коде",       emotion: "tense",         weight: 18, mood: -8,  tone: "warn", mins: 240 },
+  art_mess:    { icon: "🎨", label: "Вышла каляка-маляка",emotion: "embarrassed", weight: 16, mood: -7,  tone: "warn", mins: 180 },
   // --- тяжёлые травмы (ведут в больницу) и последствия лечения ---
-  shock:       { icon: "⚡", label: "Удар током!",      emotion: "exhausted",     weight: 60, mood: -30, permanent: true, injury: true, serious: true },
-  treated:     { icon: "💊", label: "Слабость после больницы",emotion: "exhausted",weight: 16, mood: -6,  mins: 1440 },
+  shock:       { icon: "⚡", label: "Удар током!",      emotion: "exhausted",     weight: 60, mood: -30, tone: "bad", permanent: true, injury: true, serious: true },
+  treated:     { icon: "💊", label: "Слабость после больницы",emotion: "exhausted",weight: 16, mood: -6,  tone: "neutral", mins: 1440 },
   // --- садоводство и завершённые произведения ---
-  peaceful:    { icon: "🌿", label: "Умиротворение",       emotion: "neutral",       weight: 16, mood: 10, mins: 300 },
-  finished_work:{ icon: "📦", label: "Работа завершена",   emotion: "confident",     weight: 22, mood: 12, mins: 480 }
+  peaceful:    { icon: "🌿", label: "Умиротворение",       emotion: "neutral",       weight: 16, mood: 10, tone: "good", mins: 300 },
+  finished_work:{ icon: "📦", label: "Работа завершена",   emotion: "confident",     weight: 22, mood: 12, tone: "good", mins: 480 },
+  // --- публикация произведений (0.0.4.8) ---
+  published:   { icon: "🚀", label: "Опубликовано!",      emotion: "cheerful",      weight: 28, mood: 15, tone: "good", mins: 600 }
 };
 
 window.addMoodlet = function(id, minsOverride) {
@@ -2158,7 +2338,8 @@ window.renderMoodletPanel = function() {
   var emTip = emName + (reasons.length ? ":\n• " + reasons.join("\n• ") : "");
   var list = (p.moodlets || []).map(function(m){
     var def = window.getMoodletDef(m);
-    return '<span class="moodlet-chip" title="'+def.label+moodTime(m)+'">'+def.icon+'</span>';
+    var tone = def.tone || "neutral";
+    return '<span class="moodlet-chip tone-'+tone+'" title="'+def.label+moodTime(m)+'">'+def.icon+'</span>';
   }).join("");
   return '<div class="moodlet-panel">'
     + '<div class="emotion-line"><span class="emotion-icon" title="'+emTip.replace(/"/g,'&quot;')+'">'+em.icon+'</span>'
@@ -2273,19 +2454,10 @@ window.ACTIONS = {
   draw:       { room: "workshop",    time: 60,  ignore: ["fun", "energy"],
                 add: { fun: 20 }, cost: { energy: 3 },
                 skill: "art", xp: 5, label: "Рисовать" },
-  // --- создание произведений (0.0.4.7): выбор в отдельных пассажах ---
-  make_art:    { room: "workshop",  time: 120, ignore: ["fun", "energy"],
-                add: { fun: 15 }, cost: { energy: 8 },
-                skill: "art", xp: 5, label: "Создать арт" },
-  make_program:{ room: "office",    time: 180, ignore: ["energy"],
-                cost: { energy: 14 },
-                skill: "programming", xp: 5, label: "Написать программу" },
-  make_game:   { room: "office",    time: 240, ignore: ["energy","fun"],
-                add: { fun: 8 }, cost: { energy: 18 },
-                skill: "programming", xp: 5, label: "Сделать игру" },
-  write_book:  { room: "office",    time: 180, ignore: ["energy","fun"],
-                add: { fun: 8 }, cost: { energy: 12 },
-                skill: "writing", xp: 5, label: "Написать книгу" },
+  // --- практика письма (создание книг — отдельные поэтапные проекты) ---
+  write_practice:{ room: "office",  time: 60, ignore: ["fun","energy"],
+                add: { fun: 6 }, cost: { energy: 5 },
+                skill: "writing", xp: 5, label: "Писать для практики" },
   // --- садоводство: уход за растением (умиротворение) ---
   water_plant: { room: "terrace",   time: 20,  ignore: ["fun","social"],
                 add: { fun: 10, social: 4 }, cost: { energy: 2 },
@@ -2467,17 +2639,13 @@ window.performAction = function(id) {
     return; // sendToHospital сам перерисует Home; качество занятия не показываем
   }
 
-  // 6c) КАЧЕСТВО результата занятия (всегда, 1..5).
-  //     Практика (draw/cook/sport/program) и создание произведений
-  //     (make_art/make_program/make_game/write_book) дают видимый результат.
+  // 6c) КАЧЕСТВО результата ПРАКТИКИ (всегда, 1..5). Создание проектов
+  //     (рисунок/программа/игра/книга) идёт отдельно — поэтапно в пассаже ProjectWork.
   var qKey = {
     draw: "draw", cook: "cook", sport: "sport", program: "program",
-    make_art: "art", make_program: "program", make_game: "program", write_book: "book"
+    write_practice: "book"
   }[id];
-  if (qKey) {
-    if (id.indexOf("make_") === 0 || id === "write_book") window.finishCreation(id, a.skill);
-    else window.applyQuality(qKey, a.skill);
-  }
+  if (qKey) window.applyQuality(qKey, a.skill);
 
   // 7) финал: критические потребности + настроение
   window.finishAction();
@@ -2894,42 +3062,48 @@ window.finishCharacterCreation = function() {
     &lt;/div&gt;
   &lt;/div&gt;
 &lt;/div&gt;
-&lt;&lt;/nobr&gt;&gt;</tw-passagedata><tw-passagedata pid="910" name="ArtStudio" tags="" position="1200,21997800" size="100,100">&lt;&lt;nobr&gt;&gt;
+&lt;&lt;/nobr&gt;&gt;</tw-passagedata><tw-passagedata pid="913" name="ProjectWork" tags="" position="1200,1300" size="100,100">&lt;&lt;nobr&gt;&gt;
 &lt;div class="character-creation"&gt;
-  &lt;div class="cc-main-title"&gt;🎨 Мастерская: творчество&lt;/div&gt;
+  &lt;div class="cc-main-title"&gt;&lt;&lt;print window.projectTitle($projectType)&gt;&gt;&lt;/div&gt;
+  &lt;div class="cc-block" style="max-width:560px;margin:0 auto;"&gt;
+    &lt;&lt;print window.projectBody($projectType)&gt;&gt;
+    &lt;div class="cc-buttons is-vertical"&gt;
+      &lt;&lt;if not window.getProject($projectType).done&gt;&gt;
+        &lt;&lt;link "✍️ Поработать (10 минут)"&gt;&gt;&lt;&lt;run window.workOnProject($projectType)&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;else&gt;&gt;
+        &lt;&lt;link "🚀 Опубликовать"&gt;&gt;&lt;&lt;run window.publishProject($projectType)&gt;&gt;&lt;&lt;/link&gt;&gt;
+        &lt;&lt;link "🗑️ Удалить"&gt;&gt;&lt;&lt;run window.deleteProject($projectType)&gt;&gt;&lt;&lt;/link&gt;&gt;
+        &lt;&lt;link "💾 Решить позже (назад)"&gt;&gt;&lt;&lt;run window.goProjectHub()&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;/if&gt;&gt;
+      &lt;&lt;link "↩️ К выбору занятия"&gt;&gt;&lt;&lt;run window.goProjectHub()&gt;&gt;&lt;&lt;/link&gt;&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+&lt;&lt;/nobr&gt;&gt;</tw-passagedata><tw-passagedata pid="910" name="ArtStudio" tags="" position="1200,1200" size="100,100">&lt;&lt;nobr&gt;&gt;
+&lt;div class="character-creation"&gt;
+  &lt;div class="cc-main-title"&gt;🎨 Мастерская: рисование&lt;/div&gt;
   &lt;h1 class="cc-step-title"&gt;Чем займёмся?&lt;/h1&gt;
   &lt;div class="cc-block" style="max-width:560px;margin:0 auto;"&gt;
-    &lt;p class="cc-hint"&gt;Здесь вы рисуете для души или создаёте готовый арт. Качество зависит от навыка рисования. Готовые работы позже можно будет продавать.&lt;/p&gt;
+    &lt;p class="cc-hint"&gt;Рисуйте для практики или возьмитесь за рисунок — большую работу на несколько подходов. Прогресс и качество растут постепенно; чем выше навык, тем лучше результат.&lt;/p&gt;
     &lt;div class="cc-buttons is-vertical"&gt;
-    &lt;&lt;link "🖌️ Практиковаться в рисовании (1 час, рост навыка)"&gt;&gt;&lt;&lt;run performAction("draw")&gt;&gt;&lt;&lt;/link&gt;&gt;
-    &lt;&lt;link "🖼️ Создать арт (2 часа, готовое произведение)"&gt;&gt;&lt;&lt;run performAction("make_art")&gt;&gt;&lt;&lt;/link&gt;&gt;
+    &lt;&lt;link "🖌️ Практиковаться в рисовании (1 час, рост навыка)"&gt;&gt;&lt;&lt;run performAction(&quot;draw&quot;)&gt;&gt;&lt;&lt;/link&gt;&gt;
+    &lt;&lt;link "🖼️ Работать над рисунком (по 10 мин)"&gt;&gt;&lt;&lt;run window.openProject(&quot;art&quot;)&gt;&gt;&lt;&lt;/link&gt;&gt;
       &lt;&lt;link "🚶 Вернуться домой"&gt;&gt;&lt;&lt;goto "Home"&gt;&gt;&lt;&lt;/link&gt;&gt;
     &lt;/div&gt;
   &lt;/div&gt;
 &lt;/div&gt;
-&lt;&lt;/nobr&gt;&gt;</tw-passagedata><tw-passagedata pid="911" name="CodeDesk" tags="" position="1200,21997800" size="100,100">&lt;&lt;nobr&gt;&gt;
+&lt;&lt;/nobr&gt;&gt;</tw-passagedata><tw-passagedata pid="911" name="CodeDesk" tags="" position="1200,1200" size="100,100">&lt;&lt;nobr&gt;&gt;
 &lt;div class="character-creation"&gt;
-  &lt;div class="cc-main-title"&gt;💻 Рабочий стол: разработка&lt;/div&gt;
+  &lt;div class="cc-main-title"&gt;💻 Кабинет: код и тексты&lt;/div&gt;
   &lt;h1 class="cc-step-title"&gt;Чем займёмся?&lt;/h1&gt;
   &lt;div class="cc-block" style="max-width:560px;margin:0 auto;"&gt;
-    &lt;p class="cc-hint"&gt;Кабинет для программирования. Практика прокачивает навык, а крупные проекты — программы и игры — станут готовыми произведениями (позже их можно будет продавать).&lt;/p&gt;
+    &lt;p class="cc-hint"&gt;Здесь занимаются программированием и писательством. Практика быстро растит навык, а программы, игры и книги — это большие проекты на много подходов по 10 минут.&lt;/p&gt;
     &lt;div class="cc-buttons is-vertical"&gt;
-    &lt;&lt;link "🧩 Практиковаться в коде (2 часа, рост навыка)"&gt;&gt;&lt;&lt;run performAction("program")&gt;&gt;&lt;&lt;/link&gt;&gt;
-    &lt;&lt;link "⌨️ Написать программу (3 часа, готовый проект)"&gt;&gt;&lt;&lt;run performAction("make_program")&gt;&gt;&lt;&lt;/link&gt;&gt;
-    &lt;&lt;link "🎮 Сделать игру (4 часа, сложный проект)"&gt;&gt;&lt;&lt;run performAction("make_game")&gt;&gt;&lt;&lt;/link&gt;&gt;
-    &lt;&lt;link "✍️ Написать книгу (3 часа, навык писательства)"&gt;&gt;&lt;&lt;run performAction("write_book")&gt;&gt;&lt;&lt;/link&gt;&gt;
-      &lt;&lt;link "🚶 Вернуться домой"&gt;&gt;&lt;&lt;goto "Home"&gt;&gt;&lt;&lt;/link&gt;&gt;
-    &lt;/div&gt;
-  &lt;/div&gt;
-&lt;/div&gt;
-&lt;&lt;/nobr&gt;&gt;</tw-passagedata><tw-passagedata pid="912" name="WritingDesk" tags="" position="1200,21997800" size="100,100">&lt;&lt;nobr&gt;&gt;
-&lt;div class="character-creation"&gt;
-  &lt;div class="cc-main-title"&gt;✍️ Письменный стол&lt;/div&gt;
-  &lt;h1 class="cc-step-title"&gt;Чем займёмся?&lt;/h1&gt;
-  &lt;div class="cc-block" style="max-width:560px;margin:0 auto;"&gt;
-    &lt;p class="cc-hint"&gt;Тихое место для текстов. Пишите книги: качество зависит от навыка писательства, завершённые работы позже можно будет издавать.&lt;/p&gt;
-    &lt;div class="cc-buttons is-vertical"&gt;
-    &lt;&lt;link "📝 Написать книгу (3 часа, готовое произведение)"&gt;&gt;&lt;&lt;run performAction("write_book")&gt;&gt;&lt;&lt;/link&gt;&gt;
+    &lt;&lt;link "🧩 Практиковаться в коде (2 часа)"&gt;&gt;&lt;&lt;run performAction(&quot;program&quot;)&gt;&gt;&lt;&lt;/link&gt;&gt;
+    &lt;&lt;link "📝 Писать для практики (1 час, навык писательства)"&gt;&gt;&lt;&lt;run performAction(&quot;write_practice&quot;)&gt;&gt;&lt;&lt;/link&gt;&gt;
+    &lt;&lt;link "⌨️ Работать над программой (по 10 мин)"&gt;&gt;&lt;&lt;run window.openProject(&quot;program&quot;)&gt;&gt;&lt;&lt;/link&gt;&gt;
+    &lt;&lt;link "🎮 Работать над игрой (по 10 мин)"&gt;&gt;&lt;&lt;run window.openProject(&quot;game&quot;)&gt;&gt;&lt;&lt;/link&gt;&gt;
+    &lt;&lt;link "📖 Работать над книгой (по 10 мин)"&gt;&gt;&lt;&lt;run window.openProject(&quot;book&quot;)&gt;&gt;&lt;&lt;/link&gt;&gt;
       &lt;&lt;link "🚶 Вернуться домой"&gt;&gt;&lt;&lt;goto "Home"&gt;&gt;&lt;&lt;/link&gt;&gt;
     &lt;/div&gt;
   &lt;/div&gt;
