@@ -159,7 +159,14 @@ body {
   );
   border-right: 1px solid var(--border);
   box-shadow: 8px 0 30px rgba(0, 0, 0, 0.25);
-  width: 280px;
+  width: 320px;
+}
+
+#story {
+  margin-left: 22.5em;
+}
+@media screen and (max-width: 1136px) {
+  #ui-bar.stowed { width: 320px; }
 }
 
 #ui-bar .sidebar-content {
@@ -185,6 +192,20 @@ body {
 .money {
   color: var(--gold);
 }
+
+/* Красная плашка долга (больница/счета) */
+.debt-banner {
+  background: #4a1414;
+  border: 1px solid #b03a3a;
+  color: #ffb3b3;
+  font-size: 13px;
+  font-weight: bold;
+  border-radius: 8px;
+  padding: 6px 10px;
+  margin: 2px 0 8px;
+  text-align: center;
+}
+.debt-banner strong { color: #ff6b6b; }
 
 /* ПОТРЕБНОСТИ — панель в одной рамке */
 #ui-bar .needs-panel {
@@ -325,9 +346,79 @@ body {
   background-color: #39c878;
 }
 
+/* Панель эмоции и мудлетов (как облачко в Симс) */
+.moodlet-panel {
+  margin: 8px 0 4px;
+  padding: 7px 9px;
+  background: rgba(255,255,255,0.045);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.moodlet-panel .emotion-line {
+  display: flex; align-items: center; gap: 8px;
+  font-weight: 700; font-size: 1.02em; color: var(--text-main);
+}
+.moodlet-panel .emotion-icon { font-size: 1.25em; line-height: 1; }
+.moodlet-panel .moodlet-row {
+  margin-top: 7px; display: flex; flex-wrap: wrap; gap: 5px;
+}
+.moodlet-chip {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 26px; height: 26px; padding: 0 5px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-size: 0.95em; cursor: default;
+}
+
 /* Кнопки меню */
 #ui-bar .menu-buttons {
   margin-top: 4px;
+}
+
+/* Встроенное меню SugarCube (Сохранения/Настройки/Заново) — в стиле сайдбара */
+#ui-bar #menu li {
+  margin: 0 0 5px;
+}
+#ui-bar #menu li a {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  padding: 7px 9px;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-weight: normal;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+#ui-bar #menu li a:hover {
+  background: var(--bg-panel-hover);
+  border-color: var(--border-hover);
+  color: var(--text-main);
+  text-decoration: none;
+}
+#ui-bar #menu li a::before {
+  margin-right: 8px;
+}
+
+/* Кнопки экрана сна — во всю ширину колонкой, не вылезая за карточку */
+.character-creation .cc-buttons.is-vertical {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+.character-creation .cc-buttons.is-vertical a.link-internal,
+.character-creation .cc-buttons.is-vertical .link-internal {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  margin: 0;
+  text-align: center;
+  padding: 11px 16px;
+  white-space: normal;
 }
 
 #ui-bar .menu-buttons button,
@@ -790,10 +881,50 @@ html.game-not-started #ui-bar.stowed ~ #story { margin-left: 0 !important; }
 }
 .cc-feature--on { border-color: var(--accent); color: var(--accent); background: rgba(142,162,255,0.10); }
 .cc-house-amen { color: var(--text-main); font-size: 0.9em; margin-bottom: 6px; }
+
+
+/* Красная плашка-уведомление (вместо alert) */
+/* --- Тосты 0.0.4 (опыт/уровни/события) --- */
+#ls-toasts {
+  position: fixed; top: 16px; right: 16px; z-index: 99999;
+  display: flex; flex-direction: column; gap: 8px;
+  max-width: 320px; pointer-events: none;
+}
+.ls-toast {
+  background: rgba(20, 24, 40, 0.96);
+  color: #e8ecf8;
+  border: 1px solid var(--accent, #4d7cfe);
+  border-left: 4px solid var(--accent, #4d7cfe);
+  border-radius: 10px; padding: 10px 14px;
+  font-size: 0.92em; line-height: 1.35;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+  opacity: 0; transform: translateX(20px);
+  transition: opacity .35s ease, transform .35s ease;
+}
+.ls-toast--good { border-color: #3fb96b; border-left-color: #3fb96b; }
+.ls-toast--warn { border-color: #e0a63d; border-left-color: #e0a63d; }
+.ls-toast--bad  { border-color: #e0556b; border-left-color: #e0556b; }
+.ls-toast.ls-toast--show { opacity: 1; transform: translateX(0); }
+.ls-toast.ls-toast--out  { opacity: 0; transform: translateX(20px); }
+
+#cc-notify {
+  position: fixed; top: 24px; left: 50%; transform: translateX(-50%) translateY(-12px);
+  z-index: 100001; max-width: 80%; padding: 12px 22px;
+  background: rgba(120, 20, 30, 0.96); color: #ffd9de;
+  border: 1px solid #e05252; border-radius: 8px;
+  font-size: 0.95em; box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+  opacity: 0; pointer-events: none; transition: opacity .25s ease, transform .25s ease;
+}
+#cc-notify.cc-notify--show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.cc-house--dev { border-style: dashed; opacity: 0.92; }
+.cc-house--dev .cc-house-head { color: var(--gold); }
 </style><script role="script" id="twine-user-script" type="text/twine-javascript">window.advanceTime = function(minutes, ignoreNeeds) {
   var game = State.variables.game;
   if (!game || !game.time) return;
   var t = game.time;
+  if (typeof t.clock !== "number") t.clock = 0;
+  t.clock += minutes;
+  var daysBefore = t.totalDays;
   t.minute += minutes;
   while (t.minute >= 60) {
     t.minute -= 60;
@@ -819,7 +950,19 @@ html.game-not-started #ui-bar.stowed ~ #story { margin-left: 0 !important; }
       t.year = year;
     }
   }
+  // Новые сутки: сбрасываем суточный лимит обучения
+  if (t.totalDays > daysBefore && game.player) {
+    game.player.skillDaily = {};
+    game.player.skillCappedToday = [];
+    if (game.player.stats) game.player.stats.daysPlayed = t.totalDays;
+  }
   updateNeeds(minutes, ignoreNeeds);
+  // Тик мудлетов и пересборка состояний
+  if (game.player) {
+    window.tickMoodlets(minutes);
+    window.refreshNeedMoodlets();
+    window.updateMood();
+  }
 };
 
 window.updateNeeds = function(minutes, ignoreNeeds) {
@@ -890,7 +1033,10 @@ window.updateMood = function() {
   if (n.energy < 10) penalty += 10;
   if (n.satiety < 10) penalty += 10;
   if (n.bladder < 10) penalty += 10;
-  n.mood = Math.round(Math.min(100, Math.max(0, avg - penalty)));
+  var base = Math.min(100, Math.max(0, avg - penalty));
+  // Вклад активных мудлетов (вкусный ужин, голод, травма и т.п.)
+  var bonus = (typeof window.moodletMoodBonus === "function") ? window.moodletMoodBonus() : 0;
+  n.mood = Math.round(Math.min(100, Math.max(0, base + bonus)));
 };
 
 // Функция определения уровня потребности (7 состояний)
@@ -1144,17 +1290,22 @@ window.SKILL_BASE   = 1;   // базовый уровень
 window.SKILL_MAX    = 3;   // максимум (база + 2 в один навык)
 
 window.SKILLS = [
-  { id: "cooking",       name: "Кулинария" },
-  { id: "cleaning",      name: "Уборка" },
-  { id: "charisma",      name: "Обаяние" },
-  { id: "sport",         name: "Спорт" },
-  { id: "intelligence",  name: "Интеллект" },
-  { id: "programming",   name: "Программирование" },
-  { id: "art",           name: "Рисование" },
-  { id: "dance",         name: "Танцы" },
-  { id: "repair",        name: "Ремонт" },
-  { id: "gardening",     name: "Садоводство" }
+  { id: "cooking",       name: "Кулинария",     icon: "🍳" },
+  { id: "cleaning",      name: "Уборка",        icon: "🧹" },
+  { id: "charisma",      name: "Обаяние",       icon: "💬" },
+  { id: "sport",         name: "Спорт",         icon: "🏋️" },
+  { id: "intelligence",  name: "Интеллект",     icon: "🧠" },
+  { id: "programming",   name: "Программирование", icon: "💻" },
+  { id: "art",           name: "Рисование",     icon: "🎨" },
+  { id: "dance",         name: "Танцы",         icon: "💃" },
+  { id: "repair",        name: "Ремонт",        icon: "🔧" },
+  { id: "gardening",     name: "Садоводство",   icon: "🌱" }
 ];
+window.skillIcon = function(id) {
+  var ic = "⭐";
+  window.SKILLS.forEach(function(k){ if (k.id === id) ic = k.icon || "⭐"; });
+  return ic;
+};
 
 window.HOUSING_OPTIONS = [
   { id: "room",  name: "Комната (подселение)",    rent: 300, startRoom: "bedroom",
@@ -1165,7 +1316,10 @@ window.HOUSING_OPTIONS = [
     desc: "Своя отдельная однушка без соседей: жилая комната (гостиная), спальня, кухня и санузел. Есть где готовить и отдыхать, но кабинета, спортзала и мастерской пока нет." },
   { id: "flat2", name: "Нормальная квартира",     rent: 800, startRoom: "living_room",
     rooms: ["living_room","bedroom","kitchen","bathroom","hallway","office"],
-    desc: "Просторная квартира: отдельная гостиная, спальня, кухня, ванная и даже кабинет для работы. Комфортно и просторно, но спортзала, мастерской и гаража пока нет." }
+    desc: "Просторная квартира: отдельная гостиная, спальня, кухня, ванная и даже кабинет для работы. Комфортно и просторно, но спортзала, мастерской и гаража пока нет." },
+  { id: "mansion", name: "🛠️ Богатый дом (для разработки)", rent: 0, dev: true, startRoom: "living_room",
+    rooms: ["living_room","bedroom","kitchen","bathroom","gym","office","workshop","garage","hallway","terrace"],
+    desc: "Огромный особняк со ВСЕМИ помещениями: спортзал, кабинет, мастерская, гараж и терраса. Служебный вариант для тестирования." }
 ];
 
 // Названия комнат для описания жилья
@@ -1208,19 +1362,28 @@ window.renderTraits = function() {
     + "<div class=\"cc-block\"><h2>Отрицательные (дают очки)</h2>" + neg.map(traitBtn).join("") + "</div>";
 };
 
+window.toggleFeature = function(name) {
+  var f = State.variables.game.player.appearance.features;
+  f[name] = !f[name];
+  window.ccRefresh("CharacterStep2");
+};
+
 window.toggleTrait = function(id) {
   var p = State.variables.game.player;
   if (!Array.isArray(p.traits)) p.traits = [];
   var i = p.traits.indexOf(id);
-  if (i !== -1) { p.traits.splice(i, 1); return; }
-  var tr = null;
-  window.TRAITS.forEach(function(x){ if (x.id === id) tr = x; });
-  if (!tr) return;
-  if (tr.sign === "pos" && window.getTraitPoints().left < tr.cost) {
-    alert("Не хватает очков черт. Возьмите отрицательную черту или откажитесь от другой положительной.");
-    return;
+  if (i !== -1) { p.traits.splice(i, 1); }
+  else {
+    var tr = null;
+    window.TRAITS.forEach(function(x){ if (x.id === id) tr = x; });
+    if (!tr) return;
+    if (tr.sign === "pos" && window.getTraitPoints().left < tr.cost) {
+      window.ccNotify("Не хватает очков черт: возьмите отрицательную черту или уберите другую положительную.");
+      return;
+    }
+    p.traits.push(id);
   }
-  p.traits.push(id);
+  window.ccRefresh("CharacterStep3");
 };
 window.traitName = function(id) {
   var n = id;
@@ -1232,18 +1395,24 @@ window.traitName = function(id) {
 window.getSkillPointsLeft = function() {
   var s = State.variables.game.player.skills;
   var used = 0;
-  window.SKILLS.forEach(function(k){ used += (Number(s[k.id]) || window.SKILL_BASE) - window.SKILL_BASE; });
+  window.SKILLS.forEach(function(k){
+    var lvl = (s[k.id] && typeof s[k.id] === "object") ? s[k.id].level : (Number(s[k.id]) || window.SKILL_BASE);
+    used += lvl - window.SKILL_BASE;
+  });
   return window.SKILL_POINTS - used;
 };
 window.skillInc = function(id) {
-  var s = State.variables.game.player.skills;
-  if ((Number(s[id]) || window.SKILL_BASE) >= window.SKILL_MAX) return;
-  if (window.getSkillPointsLeft() <= 0) { alert("Свободные очки навыков закончились."); return; }
-  s[id] = (Number(s[id]) || window.SKILL_BASE) + 1;
+  window.migrateGame();
+  var sk = window.getSkill(id);
+  // На создании персонажа потолок — SKILL_MAX (3)
+  if (sk.level >= window.SKILL_MAX) { window.ccNotify("В редакторе максимум навыка — " + window.SKILL_MAX + ". Дальше растите в игре."); return; }
+  if (window.getSkillPointsLeft() <= 0) { window.ccNotify("Свободные очки навыков закончились."); return; }
+  sk.level += 1;
 };
 window.skillDec = function(id) {
-  var s = State.variables.game.player.skills;
-  if ((Number(s[id]) || window.SKILL_BASE) > window.SKILL_BASE) s[id] = (Number(s[id]) || window.SKILL_BASE) - 1;
+  window.migrateGame();
+  var sk = window.getSkill(id);
+  if (sk.level > window.SKILL_BASE) sk.level -= 1;
 };
 window.skillName = function(id) {
   var n = id;
@@ -1259,7 +1428,7 @@ window.renderHousing = function() {
   window.HOUSING_OPTIONS.forEach(function(h) {
     var sel = (cur === h.id);
     var amenities = (h.rooms || []).map(function(r){ return window.ROOM_SHORT_NAMES[r] || r; }).join(", ");
-    out += "<div class=\"cc-house" + (sel ? " cc-house--selected" : "") + "\">"
+    out += "<div class=\"cc-house" + (sel ? " cc-house--selected" : "") + (h.dev ? " cc-house--dev" : "") + "\">"
       + "<div class=\"cc-house-head\">" + (sel ? "✓ " : "") + h.name + " — $" + h.rent + "/мес</div>"
       + "<div class=\"cc-house-desc\">" + h.desc + "</div>"
       + "<div class=\"cc-house-amen\">Помещения: " + amenities + ".</div>"
@@ -1273,7 +1442,7 @@ window.renderHousing = function() {
 };
 window.chooseHousing = function(id) {
   State.variables.game.player.housing = id;
-  Engine.play("CharacterStep5");
+  window.ccRefresh("CharacterStep5");
 };
 
 window.getHousing = function(id) {
@@ -1311,77 +1480,1087 @@ window.BROW_SHAPES = { straight: "Прямые", arched: "Изогнутые", t
 window.EAR_SHAPES  = { normal: "Обычные", protruding: "Оттопыренные", close: "Прижатые", large: "Крупные", small: "Маленькие" };
 window.FEATURE_OPTIONS = { freckles: "Веснушки", moles: "Родинки", scars: "Шрамы", tattoos: "Татуировки", piercings: "Пирсинг" };
 
-window.setHairLength = function(v) {
-  var a = State.variables.game.player.appearance;
-  a.hairLength = Number(v);
-  var allowed = Object.keys(window.HAIRSTYLES_BY_LENGTH[a.hairLength] || {});
-  if (allowed.indexOf(a.hairStyle) === -1) a.hairStyle = window.DEFAULT_HAIRSTYLE[a.hairLength] || allowed[0];
-  if (a.hairLength === 1) a.hairStyle = "none";
-  Engine.play("CharacterStep2");
-};
-window.setHairTexture = function(v) { State.variables.game.player.appearance.hairTexture = v; Engine.play("CharacterStep2"); };
-window.setHairStyle = function(v) { State.variables.game.player.appearance.hairStyle = v; Engine.play("CharacterStep2"); };
-window.setAppearanceValue = function(key, v) {
-  var a = State.variables.game.player.appearance;
-  a[key] = (String(v).match(/^\d+$/)) ? Number(v) : v;
-  Engine.play("CharacterStep2");
-};
-window.toggleFeature = function(name) {
-  var f = State.variables.game.player.appearance.features;
-  f[name] = !f[name];
-  Engine.play("CharacterStep2");
+// Изменение поля внешности (через делегирование событий, без inline-обработчиков)
+window.ccNotify = function(msg) {
+  var n = document.getElementById("cc-notify");
+  if (!n) { n = document.createElement("div"); n.id = "cc-notify"; document.body.appendChild(n); }
+  n.textContent = msg;
+  n.classList.add("cc-notify--show");
+  clearTimeout(window.__ccNotifyT);
+  window.__ccNotifyT = setTimeout(function(){ n.classList.remove("cc-notify--show"); }, 2600);
 };
 
-// Нативный <select> с подписями/значениями
-function _nativeSelect(optionsObj, current, onChange, numeric) {
-  var html = "<select onchange=\"" + onChange + "(this.value)\">";
-  Object.keys(optionsObj).forEach(function(k) {
-    var val = numeric ? k : k;
-    var sel = (String(current) === String(k)) ? " selected" : "";
-    html += "<option value=\"" + k + "\"" + sel + ">" + optionsObj[k] + "</option>";
+// Безопасная перерисовка: откладываем на следующий тик, чтобы событие на нативном
+// элементе успело завершиться до уничтожения/пересоздания пассажа.
+window.ccRefresh = function(passage) {
+  var target = passage || (State.passage || "CharacterStep2");
+  setTimeout(function(){ Engine.play(target); }, 0);
+};
+
+// Варианты причёски для текущей длины волос (для <<optionsfrom>>: объект подпись->id)
+window.getHairStyleOptions = function() {
+  var len = State.variables.game.player.appearance.hairLength;
+  var map = {
+    2: { "Ёжик": "buzz", "Андеркат": "undercut" },
+    3: { "Классическая": "classic", "Боковой пробор": "sidepart", "Ёжик": "buzz", "Андеркат": "undercut" },
+    4: { "Каре": "bob", "Прямые": "straight", "Небрежные": "messy", "С чёлкой": "fringe" },
+    5: { "Распущенные": "loose", "Хвост": "ponytail", "Коса": "braid", "Пучок": "bun" }
+  };
+  return map[len] || {};
+};
+
+// Делегирование: один раз на документ (надёжнее inline onchange)
+window.initCCControls = function() {
+  if (window.__ccControlsInit) return;
+  window.__ccControlsInit = true;
+  // Нативные списки SugarCube (рост, волосы, борода и т.п.) сами сохраняют значение;
+  // после их изменения перерисовываем текущий пассаж редактора, чтобы обновить описание
+  // и зависимые списки (длина волос -> доступные причёски).
+  jQuery(document).on("change", "#passages .character-creation select.macro-listbox", function() {
+    var p = State.passage || "";
+    // Нативный listbox уже записал переменную. Для длины волос нормализуем причёску:
+    // если она не подходит новой длине — ставим вариант по умолчанию (для лысого — none).
+    if (p === "CharacterStep2") {
+      var row = jQuery(this).closest(".cc-select-row");
+      var label = jQuery.trim(row.find(".cc-slider-label").text());
+      if (row.length && label === "Длина:") {
+        var a = State.variables.game.player.appearance;
+        var allowed = window.HAIRSTYLES_BY_LENGTH[a.hairLength] || null;
+        if (a.hairLength === 1) {
+          a.hairStyle = "none";
+        } else if (allowed && !allowed[a.hairStyle]) {
+          a.hairStyle = window.DEFAULT_HAIRSTYLE[a.hairLength] || Object.keys(allowed)[0];
+        }
+      }
+    }
+    if (p.indexOf("Character") === 0 || p === "CharacterCreation") {
+      setTimeout(function(){ Engine.play(State.passage); }, 0);
+    }
   });
-  return html + "</select>";
-}
-
-// Рендер блока волос (длина управляет доступными причёсками)
-window.renderHairSection = function() {
-  var a = State.variables.game.player.appearance;
-  var lengthNames = { 1: "Лысый", 2: "Очень короткие", 3: "Короткие", 4: "Средние", 5: "Длинные" };
-  var out = "<div class=\"cc-select-row\"><span class=\"cc-slider-label\">Длина:</span>";
-  out += _nativeSelect(lengthNames, a.hairLength, "window.setHairLength", true);
-  out += "</div>";
-  out += "<div class=\"cc-select-row\"><span class=\"cc-slider-label\">Цвет:</span>";
-  out += _nativeSelect({
-    black: "Чёрные", dark: "Тёмные", brown: "Каштановые", light_brown: "Русые",
-    blonde: "Светлые", red: "Рыжие", gray: "Седые", pink: "Розовые", blue: "Синие"
-  }, a.hairColor, "window.setHairColor");
-  out += "</div>";
-  if (a.hairLength >= 3) {
-    out += "<div class=\"cc-select-row\"><span class=\"cc-slider-label\">Тип волос:</span>";
-    out += _nativeSelect(window.HAIR_TEXTURES, a.hairTexture || "straight", "window.setHairTexture");
-    out += "</div>";
-  }
-  if (a.hairLength >= 2) {
-    out += "<div class=\"cc-select-row\"><span class=\"cc-slider-label\">Причёска:</span>";
-    out += _nativeSelect(window.HAIRSTYLES_BY_LENGTH[a.hairLength] || {}, a.hairStyle, "window.setHairStyle");
-    out += "</div>";
-  } else {
-    out += "<div class=\"cc-hint\">Причёска и тип волос не выбираются — нет волос.</div>";
-  }
-  return out;
+  // Кнопки-тумблеры особых примет и черт (рендерятся через JS)
+  jQuery(document).on("click", "button[data-cc-toggle]", function() {
+    window.toggleFeature(this.getAttribute("data-cc-toggle"));
+  });
+  jQuery(document).on("click", "button[data-cc-trait]", function() {
+    window.toggleTrait(this.getAttribute("data-cc-trait"));
+  });
 };
-window.setHairColor = function(v) { State.variables.game.player.appearance.hairColor = v; Engine.play("CharacterStep2"); };
+jQuery(function(){ window.initCCControls(); });
 
-// Рендер блока особенностей (тумблеры)
+/* ===========================================================================
+   0.0.4a — РЕЕСТР ДЕЙСТВИЙ + НАВЫКИ: ОПЫТ, УРОВНИ 1–10, СУТОЧНЫЙ ЛИМИТ
+   =========================================================================== */
+
+// --- Константы прокачки ---
+window.SKILL_XP_BASE       = 5;    // опыт за одно занятие
+window.SKILL_DAILY_ACTIONS = 5;    // максимум занятий одного навыка в день (усталость)
+window.SKILL_MAX_LEVEL     = 10;   // максимум уровня в игре (на создании ограничено 3)
+window.hasTrait = function(id) {
+  var p = State.variables.game && State.variables.game.player;
+  return !!(p && Array.isArray(p.traits) && p.traits.indexOf(id) !== -1);
+};
+// Сколько опыта нужно для перехода с уровня L на L+1 (медленная кривая)
+window.skillXpNeed = function(level) { return 50 + (level - 1) * 50; };
+
+// Низкоуровневое начисление опыта с повышением уровней (БЕЗ суточного лимита).
+// Суточный лимит практики учитывается отдельно в gainSkillXp; работа вызывает
+// эту функцию напрямую (медленный рост, не тратит лимит). Возвращает {gained, leveledUp, level}.
+window._applySkillXp = function(id, amount) {
+  var sk = window.getSkill(id);
+  var before = sk.level;
+  sk.xp += amount;
+  var leveled = false;
+  while (sk.level < window.SKILL_MAX_LEVEL && sk.xp >= window.skillXpNeed(sk.level)) {
+    sk.xp -= window.skillXpNeed(sk.level);
+    sk.level += 1;
+    leveled = true;
+  }
+  if (sk.level >= window.SKILL_MAX_LEVEL) sk.xp = 0;
+  if (leveled) {
+    window.toast("📈 " + window.skillName(id) + " — новый уровень " + sk.level + "!", "good");
+    // рост навыка поднимает настроение — мудлет «Гордость»
+    if (window.addMoodlet) window.addMoodlet("proud");
+  }
+  return { gained: amount, leveledUp: sk.level > before, level: sk.level };
+};
+
+// Нормализует запись навыка к {level, xp}. Мигрирует старые числовые значения.
+window.getSkill = function(id) {
+  var s = State.variables.game.player.skills;
+  var v = s[id];
+  if (typeof v !== "object" || v === null) {
+    v = { level: Number(v) || window.SKILL_BASE || 1, xp: 0 };
+    s[id] = v;
+  }
+  if (typeof v.level !== "number") v.level = window.SKILL_BASE || 1;
+  if (typeof v.xp !== "number")    v.xp = 0;
+  return v;
+};
+window.skillLevel = function(id) { return window.getSkill(id).level; };
+window.skillName2 = window.skillName; // на случай старых вызовов
+
+// Миграция состояния для новых версий (идемпотентна; безопасна на любом пассаже)
+window.migrateGame = function() {
+  var g = State.variables.game;
+  if (!g) return;
+  if (!g.player) g.player = {};
+  if (!g.player.skills) g.player.skills = {};
+  // навыки -> {level, xp}
+  if (window.SKILLS) {
+    window.SKILLS.forEach(function(k){
+      var v = g.player.skills[k.id];
+      if (typeof v !== "object" || v === null) {
+        g.player.skills[k.id] = { level: Number(v) || 1, xp: 0 };
+      }
+    });
+  }
+  if (!g.player.skillDaily || typeof g.player.skillDaily !== "object") g.player.skillDaily = {};
+  // skillDaily теперь = число ЗАНЯТИЙ сегодня (0..SKILL_DAILY_ACTIONS).
+  // В старых сейвах там были очки опыта (> лимита занятий) — обнулим как невалидное.
+  Object.keys(g.player.skillDaily).forEach(function(k){
+    if (typeof g.player.skillDaily[k] !== "number" || g.player.skillDaily[k] > (window.SKILL_DAILY_ACTIONS||5)) {
+      g.player.skillDaily[k] = 0;
+    }
+  });
+  if (!g.player.skillCappedToday) g.player.skillCappedToday = [];
+  if (g.time && typeof g.time.clock !== "number") g.time.clock = 0;
+  if (!g.player.stats) g.player.stats = { moneyEarned: 0, moneySpent: 0,
+    shiftsWorked: 0, daysPlayed: 1, artSold: 0, hospitalVisits: 0 };
+  if (!g.player.jobStats) g.player.jobStats = {};   // {jobId: {shifts, earned}}
+  if (!Array.isArray(g.player.moodlets)) g.player.moodlets = [];  // мудлеты 0.0.4.3
+  if (typeof g.player.debt !== "number") g.player.debt = 0;        // долг больнице/счетам 0.0.4.6
+};
+jQuery(document).on(":passagestart", function(){ try { window.migrateGame(); } catch(e){} });
+// Миграция старых сейвов при загрузке
+try {
+  if (typeof Save !== "undefined" && Save.onLoad) {
+    Save.onLoad.add(function(save){
+      try {
+        if (save && save.state && save.state.history && save.state.history.length) {
+          var top = save.state.history[save.state.history.length - 1];
+          if (top && top.variables && top.variables.game) {
+            var g = top.variables.game;
+            if (g.player && g.player.skills) {
+              if (window.SKILLS) window.SKILLS.forEach(function(k){
+                var v = g.player.skills[k.id];
+                if (typeof v !== "object" || v === null) g.player.skills[k.id] = { level: Number(v)||1, xp: 0 };
+              });
+              if (!g.player.skillDaily) g.player.skillDaily = {};
+              if (!g.player.skillCappedToday) g.player.skillCappedToday = [];
+              if (g.time && typeof g.time.clock !== "number") g.time.clock = 0;
+              if (!g.player.stats) g.player.stats = { moneyEarned:0, moneySpent:0, shiftsWorked:0, daysPlayed:1, artSold:0, hospitalVisits:0 };
+            }
+          }
+        }
+      } catch(e){}
+    });
+  }
+} catch(e) {}
+jQuery(document).on(":load", function(){ try { window.migrateGame(); } catch(e){} });
+
+// Начисление опыта навыку за одно занятие.
+// Суточный лимит = число занятий навыка в день (SKILL_DAILY_ACTIONS): дальше
+// навык не растёт до завтра («голова перегружена» / «мышцы забиты»).
+// Черта «быстрообучаемый» даёт больше опыта за каждое из доступных занятий.
+// Возвращает {gained, leveledUp, level, capped}.
+window.gainSkillXp = function(id, baseXp) {
+  window.migrateGame();
+  var p = State.variables.game.player;
+  var sk = window.getSkill(id);
+  if (!p.skillDaily[id]) p.skillDaily[id] = 0;  // число занятий за сегодня
+
+  function tiredToast() {
+    if (p.skillCappedToday.indexOf(id) !== -1) return;
+    p.skillCappedToday.push(id);
+    var skName = window.skillName(id);
+    var mental = ["intelligence","programming","art","charisma","cooking","cleaning","repair"];
+    window.toast(mental.indexOf(id) !== -1
+      ? "🧠 Голова перегружена: «" + skName + "» сегодня больше не растёт. Отдохните до завтра."
+      : "💪 Мышцы забиты: «" + skName + "» сегодня больше не растёт. Отдохните до завтра.", "warn");
+  }
+
+  // Лимит занятий на сегодня выбран — опыт не начисляем
+  if (p.skillDaily[id] >= window.SKILL_DAILY_ACTIONS) {
+    tiredToast();
+    return { gained: 0, leveledUp: false, level: sk.level, capped: true };
+  }
+  // Максимум уровня — опыт не капает
+  if (sk.level >= window.SKILL_MAX_LEVEL) {
+    return { gained: 0, leveledUp: false, level: sk.level, capped: false };
+  }
+
+  var base = baseXp || window.SKILL_XP_BASE;
+  var gained = window.hasTrait("fastlearner") ? Math.round(base * 1.5) : base;
+  p.skillDaily[id] += 1; // засчитали занятие
+  var res = window._applySkillXp(id, gained);
+
+  // Если это занятие было последним доступным — подсказать про усталость
+  if (p.skillDaily[id] >= window.SKILL_DAILY_ACTIONS) tiredToast();
+  res.capped = p.skillDaily[id] >= window.SKILL_DAILY_ACTIONS;
+  return res;
+};
+
+/* ===========================================================================
+   0.0.4.5 — КАЧЕСТВО ЗАНЯТИЙ (1–5) И РЕДКИЕ СРЫВЫ/ТРАВМЫ
+   ДВА независимых слоя:
+   1) КАЧЕСТВО — результат занятия ВСЕГДА (каляка -> шедевр), зависит от
+      уровня навыка + случайность. Не «провал», а насколько хорошо вышло.
+   2) СРЫВ/ТРАВМА — редкий отдельный слой (потянул мышцу, порезался…),
+      шанс ВЫШЕ на низком навыке и при черте «неуклюжий». Черта «выносливый»
+      и высокий навык — снижают. Это НЕ качество: шедевр тоже можно писать
+      через потянутую спину.
+   =========================================================================== */
+
+// Описания качества по навыкам (1 — ужасно … 5 — шедевр)
+window.QUALITY_LABELS = {
+  1: "Получилось из рук вон плохо",
+  2: "Вышло так себе",
+  3: "Нормально, ровно",
+  4: "Здорово получилось",
+  5: "Настоящий шедевр"
+};
+// Узкоспециальные подписи результата под конкретные занятия
+window.QUALITY_TEXT = {
+  draw:   { 1: "Рисунок вышел калякой-малякой.", 2: "Набросок, конечно, кривоват.", 3: "Вышел неплохой рисунок.", 4: "Картина прямо радует глаз.", 5: "Это настоящий шедевр — хочется повесить на стену!" },
+  cook:   { 1: "Блюдо почти несъедобно.", 2: "Пересолено и подгорело.", 3: "Обычный домашний обед.", 4: "Очень вкусно, пальчики оближешь.", 5: "Ресторанный деликатес, идеально!" },
+  sport:  { 1: "Тренировка прошла кое-как, еле размялся.", 2: "Слабая вялая тренировка.", 3: "Нормально позанимался.", 4: "Отличная продуктивная тренировка!", 5: "Рекордная тренировка — сам в шоке!" },
+  program:{ 1: "Код не запускается, сплошные ошибки.", 2: "Работает через раз.", 3: "Программа работает как задумано.", 4: "Чистый, красивый, быстрый код.", 5: "Гениальное решение — работает идеально!" },
+  dance:  { 1: "Слоны на льду, а не танец.", 2: "Двигаетесь не в такт.", 3: "Танцуете уверенно.", 4: "Пластика и ритм — загляденье!", 5: "Танец, от которого все аплодируют!" }
+};
+
+// Базовая случайная величина качества 0..1 (изолируемо для тестов через Math.random)
+window._qualityRoll = function() { return Math.random(); };
+
+// Рассчитать качество результата занятия (1..5).
+// Зависит от уровня навыка (1..10): чем выше уровень, тем выше шанс хорошей работы.
+window.rollQuality = function(skillId, opts) {
+  opts = opts || {};
+  var level = (skillId && window.skillLevel) ? window.skillLevel(skillId) : 1;
+  // «уровень мастерства» 0..1 (уровень 1 -> ~0.1, уровень 10 -> ~1.0)
+  var mastery = (Math.max(1, Math.min(window.SKILL_MAX_LEVEL, level)) - 1) / (window.SKILL_MAX_LEVEL - 1);
+  // черта «творческий» помогает в творческих занятиях
+  var bonus = 0;
+  if (window.hasTrait && window.hasTrait("creative") &&
+      (skillId === "art" || skillId === "cooking" || skillId === "dance")) bonus += 0.15;
+  // усталость/голод чуть занижают качество (мастерство «съедается»)
+  var n = State.variables.game.player.needs;
+  if (n.energy  < 25) mastery -= 0.15;
+  if (n.satiety < 25) mastery -= 0.08;
+  mastery = Math.max(0, Math.min(1, mastery));
+
+  var roll = window._qualityRoll();                       // 0..1
+  var score = 0.15 + mastery * 0.85 * 0.55 + roll * (0.45 + bonus) + bonus;
+  score = Math.max(0, Math.min(1, score));
+  // переводим в качество 1..5
+  var q;
+  if (score < 0.18) q = 1;
+  else if (score < 0.38) q = 2;
+  else if (score < 0.62) q = 3;
+  else if (score < 0.85) q = 4;
+  else q = 5;
+  return q;
+};
+
+// Звёзды качества (1..5) для текста
+window.qualityStars = function(q) {
+  var s = "";
+  for (var i = 1; i <= 5; i++) s += (i <= q ? "⭐" : "·");
+  return s;
+};
+
+// Описание конкретного срыва для занятия: {moodlet, text, energy, fun}
+// Возвращает null, если срыва в этот раз не случилось.
+window.rollSetback = function(actionId, skillId) {
+  var level = (skillId && window.skillLevel) ? window.skillLevel(skillId) : 1;
+  var mastery = (Math.max(1, Math.min(window.SKILL_MAX_LEVEL, level)) - 1) / (window.SKILL_MAX_LEVEL - 1);
+
+  // ТЯЖЁЛАЯ травма роллится ПЕРВОЙ и независимо (это отдельный слой): при
+  // срабатывании ведёт к госпитализации и перекрывает обычный срыв.
+  var severeChance = 0.05 - mastery * 0.035;
+  if (window.hasTrait && window.hasTrait("clumsy"))   severeChance += 0.03;
+  if (window.hasTrait && window.hasTrait("enduring")) severeChance -= 0.02;
+  var nNeeds = State.variables.game.player.needs;
+  if (nNeeds.energy < 25) severeChance += 0.03;
+  severeChance = Math.max(0.005, Math.min(0.12, severeChance));
+  var severe = Math.random() < severeChance;
+
+  // Обычный (нетяжёлый) срыв: ~12% у новичка, ~2% у мастера.
+  var chance = 0.12 - mastery * 0.10;
+  if (window.hasTrait && window.hasTrait("clumsy"))   chance += 0.08;  // неуклюжий
+  if (window.hasTrait && window.hasTrait("enduring")) chance -= 0.04;  // выносливый
+  if (nNeeds.energy < 25) chance += 0.05;             // усталый чаще срывается
+  chance = Math.max(0.01, Math.min(0.4, chance));
+  if (!severe && Math.random() >= chance) return null;
+
+  // таблица срывов по занятиям
+  var SETBACKS = {
+    sport:  severe
+      ? { moodlet: "shock", serious: true, hospitalReason: "sports",
+          text: "⚡ На тренировке случился серьёзный срыв — закружилась голова, потемнело в глазах. Вас увезли в больницу.", energy: -20, fun: -10 }
+      : { moodlet: "muscle_pull", text: "🤕 Ай! Потянули мышцу на тренировке. Болит, но не критично.", energy: -12, fun: -8 },
+    cook:   severe
+      ? { moodlet: "shock", serious: true, hospitalReason: "kitchen",
+          text: "⚡ Схватились за неисправную проводку у плиты — удар током! Пришлось вызывать скорую.", energy: -20, fun: -10 }
+      : { moodlet: "cut_finger", text: "🩹 Порезали палец ножом, пока готовили. Пришлось заклеить пластырем.", energy: -4, fun: -4 },
+    program:{ moodlet: "code_bug", text: "🐛 Просидели над неуловимым багом весь вечер — голова квадратная.", energy: -8, fun: -8 },
+    draw:   { moodlet: "art_mess", text: "🎨 Смешали все краски в грязно-бурый — холст испорчен, настроение тоже.", fun: -8 },
+    repair: severe
+      ? { moodlet: "shock", serious: true, hospitalReason: "repair",
+          text: "⚡ Дёрнуло током от оголённого провода! Вы потеряли сознание — очнулись уже по дороге в больницу.", energy: -20, fun: -10 }
+      : { moodlet: "muscle_pull", text: "🤕 Сорвали спину, таская детали. Придётся беречься.", energy: -12 }
+  };
+  return SETBACKS[actionId] || null;
+};
+
+// Применить качество занятия: тост + мудлет (для высокого/низкого исхода).
+window.applyQuality = function(actionId, skillId) {
+  var q = window.rollQuality(skillId);
+  var dict = window.QUALITY_TEXT[actionId] || {};
+  var text = dict[q] || window.QUALITY_LABELS[q];
+  var icon = q >= 4 ? "✨" : (q <= 2 ? "😬" : "•");
+  var type = q >= 4 ? "good" : (q <= 2 ? "bad" : "info");
+  window.toast(icon + " " + text + "  " + window.qualityStars(q), type);
+  // Мудлет под итог качества: высокое -> гордость/уверенность, низкое -> расстройство.
+  // Отдельный мудлет СРЫВА (если сработал) живёт сам по себе и не теряется.
+  if (q === 5) window.addMoodlet("masterpiece");
+  else if (q === 4) window.addMoodlet("great_work");
+  else if (q === 3) window.addMoodlet("good_work");
+  else if (q === 1 && actionId === "draw") window.addMoodlet("art_mess"); // каляка-маляка
+  else if (q <= 2) window.addMoodlet("poor_work");
+  // качество 3 («нормально») — нейтрально, отдельного мудлета не даём
+  return q;
+};
+
+/* ===========================================================================
+   0.0.4.6 — БОЛЬНИЦА И ТЯЖЁЛЫЕ ТРАВМЫ
+   sendToHospital(reason): проматывает сутки лечения, восстанавливает
+   потребности, снимает острые дебаффы, навешивает мудлет слабости и
+   выставляет счёт $500. Если денег не хватает — уходит в долг (красная
+   плашка в сайдбаре). После лечения возвращает домой.
+   =========================================================================== */
+window.HOSPITAL_COST = 500;
+window.HOSPITAL_DAYS = 1;
+
+// Человекочитаемая причина госпитализации для текста
+window.HOSPITAL_REASONS = {
+  sports:  "перетренировались и получили серьёзную травму на спортзале",
+  kitchen: "получили удар током от неисправной плиты",
+  repair:  "дёрнуло током при ремонте оголённой проводки",
+  manual:  "обратились в больницу за лечением"
+};
+
+// Острые дебаффы, которые больница снимает (травмы, ожоги, срывы).
+window.HOSPITAL_CURES = ["shock","muscle_pull","back_strain","burned_hand","minor_burn","cut_finger"];
+
+window.sendToHospital = function(reason) {
+  window.migrateGame();
+  var g = State.variables.game, p = g.player;
+  reason = reason || "manual";
+  var n = p.needs;
+
+  // 1) сутки лечения (промотка времени в «больничном» режиме — энергия растёт)
+  p.sleeping = true; // чтобы updateNeeds восстанавливал энергию, как во сне/отдыхе
+  advanceTime(window.HOSPITAL_DAYS * 24 * 60, []);
+  p.sleeping = false;
+
+  // 2) восстановление потребностей
+  n.energy  = 90;
+  n.satiety = 80;
+  n.hygiene = 85;
+  n.social  = Math.max(n.social || 0, 55);
+  n.fun     = Math.max(n.fun || 0, 45);
+  n.bladder = 95;
+
+  // 3) снять острые дебаффы-травмы; наложить мудлет слабости после больницы
+  if (Array.isArray(p.moodlets)) {
+    p.moodlets = p.moodlets.filter(function(m){
+      return window.HOSPITAL_CURES.indexOf(m.id) === -1;
+    });
+  }
+  window.addMoodlet("treated");
+
+  // 4) счёт за лечение: деньгами, при нехватке — в долг
+  var cost = window.HOSPITAL_COST;
+  var paid = Math.min(p.money, cost);
+  p.money -= paid;
+  var remaining = cost - paid;
+  if (remaining > 0) {
+    p.debt = (p.debt || 0) + remaining;
+    window.toast("🏥 Вы пробыли в больнице сутки. Счёт $" + cost + ": хватило $" + paid
+      + ", остальное $" + remaining + " ушло в ДОЛГ.", "bad");
+  } else {
+    window.toast("🏥 Вы пробыли в больнице сутки. Оплата лечения: -$" + cost + ".", "info");
+  }
+  if (p.stats) p.stats.hospitalVisits = (p.stats.hospitalVisits || 0) + 1;
+
+  // 5) возврат домой
+  g.location = "home";
+  g.room = "living_room";
+  window.finishAction();
+
+  var why = window.HOSPITAL_REASONS[reason] || window.HOSPITAL_REASONS.manual;
+  window.toast("💊 Вас подлечили: потребности восстановлены, острая травма прошла. "
+    + "Вы " + why + ", но уже идёте на поправку.", "good");
+
+  setTimeout(function(){ Engine.play("Home"); }, 0);
+};
+
+// Добровольно пойти в больницу (через пассаж): стоит денег, снимает травмы.
+window.goHospitalVoluntary = function() {
+  window.sendToHospital("manual");
+};
+
+/* ===========================================================================
+   0.0.4.2 — РАБОТА (подработка дома: грузчик/официант/продавец/повар)
+   =========================================================================== */
+// Базовый навык: «сила» в отдельный навык не вынесена — грузчик опирается на спорт.
+// Порядок — от низкой зарплаты к высокой.
+window.JOBS = [
+  { id: "seller", icon: "🏷️", name: "Продавец",
+    desc: "Стоять за кассой в магазине. Зависит от обаяния.",
+    skill: "charisma", xp: 2, basePay: 50, energy: 10, fun: -8,
+    events: [
+      { type: "good", chance: 0.12, moodlet: "caught_thief", text: "🥷 Вы заметили вора и задержали его — премия +$20!", pay: 20 },
+      { type: "bad",  chance: 0.15, moodlet: "theft_loss",  text: "🛒 Вор утащил товар — из зарплаты вычли -$25.", pay: -25 }
+    ] },
+  { id: "waiter", icon: "🍽️", name: "Официант",
+    desc: "Обслуживать посетителей кафе. Чаевые зависят от обаяния.",
+    skill: "charisma", xp: 2, basePay: 55, energy: 12, fun: -5,
+    events: [
+      { type: "good", chance: 0.25, moodlet: "big_tips",    text: "👍 Довольный клиент оставил щедрые чаевые +$25!", pay: 25 },
+      { type: "bad",  chance: 0.15, moodlet: "tray_dropped",text: "🤦 Вы уронили поднос — чаевых нет, настроение упало. (-10 досуга)", fun: -10 }
+    ] },
+  { id: "cook",   icon: "🍳", name: "Повар",
+    desc: "Готовить на кухне кафе. Зависит от кулинарии, со временем растёт.",
+    skill: "cooking", xp: 2, basePay: 60, energy: 14, satiety: 6,
+    events: [
+      { type: "good", chance: 0.18, moodlet: "dish_praised", text: "🍲 Ваше блюдо похвалили — небольшая премия +$20!", pay: 20 },
+      { type: "bad",  chance: 0.12, moodlet: "burned_hand",   text: "♨️ Обожглись у плиты — смена вышла тяжелее. (-8 энергии)", energy: -8 }
+    ] },
+  { id: "loader", icon: "📦", name: "Грузчик",
+    desc: "Переносить тяжести на складе. Устаёшь физически, зависит от спорта.",
+    skill: "sport", xp: 2, basePay: 70, energy: 22, satiety: 10,
+    events: [
+      { type: "good", chance: 0.18, moodlet: "early_unload", text: "💪 Вы помогли разгрузить фуру раньше срока — премия +$30!", pay: 30 },
+      { type: "bad",  chance: 0.14, moodlet: "back_strain",   text: "🤕 Потянули спину: зарплату не урезали, но очень болит. (-10 энергии)", energy: -10 }
+    ] }
+];
+// Работа прокачивает навык МЕДЛЕННО (1–2 опыта) и не считается обычной
+// практикой: не тратит суточный лимит занятий.
+window.WORK_XP = 2;
+window.WORK_SHIFT_HOURS = 8;
+
+window.getJob = function(id) {
+  var j = null;
+  window.JOBS.forEach(function(x){ if (x.id === id) j = x; });
+  return j;
+};
+
+// Отработать смену
+/* ===========================================================================
+   0.0.4.3 — МУДЛЕТЫ И ЭМОЦИИ (как в Симс)
+   Мудлет: {id, icon, label, emotion, weight, minsLeft, mood}
+   emotion — к какому состоянию тянет; weight — сила; mood — вклад в настроение.
+   Текущая эмоция = эмоция самого сильного активного мудлета, иначе из настроения.
+   =========================================================================== */
+window.EMOTIONS = {
+  neutral:   { icon: "😐", m: "Спокоен",       f: "Спокойна" },
+  happy:     { icon: "🙂", m: "Доволен",       f: "Довольна" },
+  cheerful:  { icon: "😄", m: "Весел",         f: "Весела" },
+  playful:   { icon: "🤸", m: "Игрив",         f: "Игрива" },
+  inspired:  { icon: "💡", m: "Вдохновлён",    f: "Вдохновлена" },
+  focused:   { icon: "🎯", m: "Сосредоточен",  f: "Сосредоточена" },
+  confident: { icon: "😎", m: "Уверен",        f: "Уверена" },
+  flirty:    { icon: "😏", m: "Кокетлив",      f: "Кокетлива" },
+  sad:       { icon: "😢", m: "Расстроен",     f: "Расстроена" },
+  angry:     { icon: "😠", m: "Зол",           f: "Зла" },
+  tense:     { icon: "😰", m: "Напряжён",      f: "Напряжена" },
+  embarrassed:{ icon: "😳", m: "Смущён",       f: "Смущена" },
+  uncomfortable:{ icon: "😣", m: "Раздражён",  f: "Раздражена" },
+  exhausted: { icon: "😵", m: "Измотан",       f: "Измотана" },
+  drunk:     { icon: "🍺", m: "Пьян",          f: "Пьяна" }
+};
+// Название эмоции с учётом пола персонажа (короткое прилагательное-состояние)
+window.emotionName = function(key) {
+  var e = window.EMOTIONS[key] || window.EMOTIONS.neutral;
+  var g = (State.variables.game && State.variables.game.player) ? State.variables.game.player.gender : "муж";
+  return (g === "жен") ? e.f : e.m;
+};
+// Каталог мудлетов (label — бесполое состояние, чтобы не зависеть от пола)
+window.MOODLET_DEFS = {
+  // --- негативные от потребностей ---
+  hungry:      { icon: "🍽️", label: "Голод",           emotion: "uncomfortable", weight: 25, mood: -12 },
+  starving:    { icon: "🥺", label: "Сильный голод",   emotion: "uncomfortable", weight: 45, mood: -22 },
+  sleepy:      { icon: "😴", label: "Хочется спать",    emotion: "tense",         weight: 22, mood: -10 },
+  exhausted:   { icon: "🥱", label: "Усталость",        emotion: "exhausted",     weight: 45, mood: -22 },
+  dirty:       { icon: "🧼", label: "Грязно",           emotion: "uncomfortable", weight: 16, mood: -7 },
+  lonely:      { icon: "😔", label: "Одиночество",      emotion: "sad",           weight: 18, mood: -9 },
+  bored:       { icon: "📺", label: "Скука",            emotion: "tense",         weight: 14, mood: -6 },
+  bladder:     { icon: "🚻", label: "Нужно в туалет",   emotion: "uncomfortable", weight: 24, mood: -12 },
+  // --- позитивные ---
+  well_fed:    { icon: "🍲", label: "Сытость",          emotion: "happy",         weight: 18, mood: 8,  mins: 300 },
+  rested:      { icon: "🛏️", label: "Крепкий сон",      emotion: "happy",         weight: 22, mood: 10, mins: 480 },
+  clean:       { icon: "🚿", label: "Свежесть",         emotion: "happy",         weight: 14, mood: 6,  mins: 300 },
+  energetic:   { icon: "⚡", label: "Бодрость",        emotion: "confident",     weight: 16, mood: 8,  mins: 360 },
+  inspired:    { icon: "💡", label: "Вдохновение",      emotion: "inspired",      weight: 20, mood: 8,  mins: 240 },
+  good_talk:   { icon: "💬", label: "Приятная беседа",  emotion: "happy",         weight: 14, mood: 7,  mins: 240 },
+  proud:       { icon: "🏆", label: "Гордость",         emotion: "confident",     weight: 24, mood: 12, mins: 480 },
+  tipsy_good:  { icon: "💰", label: "Удачная смена",    emotion: "happy",         weight: 20, mood: 10, mins: 360 },
+  back_strain: { icon: "🤕", label: "Болит спина",      emotion: "uncomfortable", weight: 30, mood: -12, mins: 1440 },
+  // --- события на работе ---
+  shift_done:  { icon: "💼", label: "Трудовой день",    emotion: "exhausted",     weight: 12, mood: -4,  mins: 300 },
+  caught_thief:{ icon: "🛡️", label: "Задержал вора",    emotion: "confident",     weight: 22, mood: 12, mins: 360 },
+  theft_loss:  { icon: "💸", label: "Вычли из зарплаты",emotion: "sad",           weight: 24, mood: -14, mins: 300 },
+  big_tips:    { icon: "🪙", label: "Щедрые чаевые",    emotion: "cheerful",      weight: 22, mood: 12, mins: 360 },
+  tray_dropped:{ icon: "🤦", label: "Уронил поднос",    emotion: "embarrassed",   weight: 22, mood: -12, mins: 240 },
+  dish_praised:{ icon: "🍽️", label: "Блюдо похвалили", emotion: "confident",     weight: 22, mood: 12, mins: 360 },
+  burned_hand: { icon: "♨️", label: "Обжёгся",          emotion: "uncomfortable", weight: 24, mood: -10, mins: 240 },
+  early_unload:{ icon: "💪", label: "Сделал норму",     emotion: "confident",     weight: 22, mood: 12, mins: 360 },
+  // --- досуг/быт ---
+  amused:      { icon: "📺", label: "Отдых у телевизора",emotion: "cheerful",     weight: 12, mood: 6,  mins: 180 },
+  // --- качество занятий (0.0.4.4+) ---
+  masterpiece: { icon: "🌟", label: "Шедевр!",          emotion: "cheerful",      weight: 26, mood: 14, mins: 480 },
+  great_work:  { icon: "✨", label: "Отличный результат",emotion: "confident",   weight: 20, mood: 10, mins: 360 },
+  good_work:   { icon: "👍", label: "Хороший результат",emotion: "happy",        weight: 15, mood: 7,  mins: 300 },
+  poor_work:   { icon: "😬", label: "Комом",            emotion: "sad",           weight: 14, mood: -6, mins: 180 },
+  // --- срывы / травмы (редкий слой, выше на низком навыке) ---
+  muscle_pull: { icon: "🤕", label: "Потянул мышцу",    emotion: "uncomfortable", weight: 32, mood: -14, mins: 1200 },
+  cut_finger:  { icon: "🩹", label: "Порезал палец",    emotion: "uncomfortable", weight: 22, mood: -8,  mins: 360 },
+  minor_burn:  { icon: "♨️", label: "Обжёгся о плиту",  emotion: "uncomfortable", weight: 24, mood: -10, mins: 300 },
+  code_bug:    { icon: "🐛", label: "Баг в коде",       emotion: "tense",         weight: 18, mood: -8,  mins: 240 },
+  art_mess:    { icon: "🎨", label: "Вышла каляка-маляка",emotion: "embarrassed", weight: 16, mood: -7,  mins: 180 },
+  // --- тяжёлые травмы (ведут в больницу) и последствия лечения ---
+  shock:       { icon: "⚡", label: "Удар током!",      emotion: "exhausted",     weight: 60, mood: -30, mins: 200, serious: true },
+  treated:     { icon: "💊", label: "Слабость после больницы",emotion: "exhausted",weight: 16, mood: -6,  mins: 1440 }
+};
+
+window.addMoodlet = function(id, minsOverride) {
+  window.migrateGame();
+  var p = State.variables.game.player;
+  if (!p.moodlets) p.moodlets = [];
+  var def = window.MOODLET_DEFS[id];
+  if (!def) return;
+  // если такой уже есть — продлеваем/освежаем
+  var ex = p.moodlets.filter(function(m){ return m.id === id; })[0];
+  var mins = minsOverride || def.mins || 0;
+  if (ex) { ex.minsLeft = Math.max(ex.minsLeft, mins); return; }
+  var m = { id: id, minsLeft: mins };
+  p.moodlets.push(m);
+};
+// Мудлеты от состояний (без таймера: живут, пока выполняется условие) — пересобираются.
+window.refreshNeedMoodlets = function() {
+  window.migrateGame();
+  var p = State.variables.game.player, n = p.needs;
+  if (!p.moodlets) p.moodlets = [];
+  // Удаляем старые «состояния» (пометка state:true), затем добавляем актуальные
+  p.moodlets = p.moodlets.filter(function(m){ return !m.state; });
+  function state(id, cond) { if (cond) p.moodlets.push({ id: id, minsLeft: -1, state: true }); }
+  state("starving",    n.satiety <= 12);
+  state("hungry",      n.satiety > 12 && n.satiety < 30);
+  state("exhausted",   n.energy  <= 12);
+  state("sleepy",      n.energy  > 12 && n.energy  < 30);
+  state("dirty",       n.hygiene < 30);
+  state("lonely",      n.social  < 30);
+  state("bored",       n.fun     < 30);
+  state("bladder",     n.bladder < 25);
+};
+// Тик: снять истёкшие временные мудлеты
+window.tickMoodlets = function(minutes) {
+  var p = State.variables.game.player;
+  if (!p.moodlets) return;
+  p.moodlets.forEach(function(m){ if (!m.state && m.minsLeft > 0) m.minsLeft -= minutes; });
+  p.moodlets = p.moodlets.filter(function(m){ return m.state || m.minsLeft > 0; });
+};
+window.getMoodletDef = function(m) {
+  return window.MOODLET_DEFS[m.id] || { icon: "•", label: m.id, emotion: "neutral", weight: 0, mood: 0 };
+};
+// Суммарный вклад мудлетов в настроение
+window.moodletMoodBonus = function() {
+  var p = State.variables.game.player;
+  if (!p.moodlets) return 0;
+  var sum = 0;
+  p.moodlets.forEach(function(m){ sum += (window.getMoodletDef(m).mood || 0); });
+  return Math.max(-40, Math.min(40, sum));
+};
+// Текущая эмоция: сильнейший мудлет по весу, иначе из числового настроения
+window.currentEmotion = function() {
+  window.migrateGame();
+  var p = State.variables.game.player;
+  var best = null;
+  (p.moodlets || []).forEach(function(m){
+    var def = window.getMoodletDef(m);
+    if (!best || (def.weight || 0) > best.weight) best = { emotion: def.emotion, weight: def.weight || 0 };
+  });
+  if (best && best.weight > 0) return best.emotion;
+  var mood = p.needs.mood;
+  if (mood >= 75) return "cheerful";
+  if (mood >= 55) return "happy";
+  if (mood >= 45) return "neutral";
+  if (mood >= 25) return "sad";
+  return "tense";
+};
+// Панель эмоции и мудлетов для сайдбара
+window.renderMoodletPanel = function() {
+  window.migrateGame();
+  window.refreshNeedMoodlets();
+  var p = State.variables.game.player;
+  var emKey = window.currentEmotion();
+  var em = window.EMOTIONS[emKey] || window.EMOTIONS.neutral;
+  var emName = window.emotionName(emKey);
+  // Подсказка для эмоции: состояние + все активные причины
+  var reasons = (p.moodlets || []).map(function(m){
+    var def = window.getMoodletDef(m);
+    var time = m.state ? "" : (m.minsLeft >= 60 ? " (~" + Math.ceil(m.minsLeft/60) + "ч)" : " (~" + Math.max(1,Math.round(m.minsLeft)) + "м)");
+    return def.label + time;
+  });
+  var emTip = emName + (reasons.length ? ":\n• " + reasons.join("\n• ") : "");
+  var list = (p.moodlets || []).map(function(m){
+    var def = window.getMoodletDef(m);
+    var time = m.state ? "" : (m.minsLeft >= 60 ? " (~" + Math.ceil(m.minsLeft/60) + "ч)" : " (~" + Math.max(1,Math.round(m.minsLeft)) + "м)");
+    return '<span class="moodlet-chip" title="'+def.label+time+'">'+def.icon+'</span>';
+  }).join("");
+  return '<div class="moodlet-panel">'
+    + '<div class="emotion-line"><span class="emotion-icon" title="'+emTip.replace(/"/g,'&quot;')+'">'+em.icon+'</span>'
+    + '<span class="emotion-name">'+emName+'</span></div>'
+    + (list ? '<div class="moodlet-row">'+list+'</div>' : '')
+    + '</div>';
+};
+
+window.workShift = function(jobId) {
+  window.migrateGame();
+  var g = State.variables.game, p = g.player;
+  var job = window.getJob(jobId);
+  if (!job) { window.toast("Неизвестная работа.", "warn"); return; }
+
+  // 1) время смены (8 ч) и естественный упадок потребностей
+  advanceTime(window.WORK_SHIFT_HOURS * 60, []);
+  var n = p.needs;
+  n.energy  = Math.max(0, n.energy  - (job.energy || 0));
+  n.satiety = Math.max(0, n.satiety - (job.satiety || 8));
+  if (job.fun) n.fun = Math.max(0, Math.min(100, n.fun + job.fun));
+
+  // 2) зарплата (бонус от уровня навыка +10% за уровень выше 1)
+  var skillLvl = (job.skill && window.skillLevel) ? window.skillLevel(job.skill) : 1;
+  var pay = Math.round(job.basePay * (1 + (skillLvl - 1) * 0.1));
+
+  // 3) случайное событие
+  var msg = null, mtype = "info";
+  (job.events || []).forEach(function(ev){
+    if (msg) return; // одно событие за смену
+    if (Math.random() < ev.chance) {
+      msg = ev.text;
+      mtype = ev.type === "good" ? "good" : "bad";
+      if (ev.pay)    pay += ev.pay;
+      if (ev.energy) n.energy = Math.max(0, n.energy + ev.energy);
+      if (ev.fun)    n.fun = Math.max(0, Math.min(100, n.fun + ev.fun));
+      if (ev.satiety)n.satiety = Math.max(0, Math.min(100, n.satiety + ev.satiety));
+      // мудлет от конкретного события смены (задержал вора / чаевые / уронил поднос /
+      // обжёгся / потянул спину…), либо общий «Удачная смена»
+      if (ev.moodlet) window.addMoodlet(ev.moodlet);
+      else if (ev.type === "good") window.addMoodlet("tipsy_good");
+    }
+  });
+
+  // любая отработанная смена оставляет лёгкую усталость «Трудовой день»
+  window.addMoodlet("shift_done");
+
+  // 4) начислить деньги и статистику
+  pay = Math.max(0, pay);
+  p.money += pay;
+  if (p.stats) { p.stats.moneyEarned = (p.stats.moneyEarned || 0) + pay; p.stats.shiftsWorked = (p.stats.shiftsWorked || 0) + 1; }
+  if (!p.jobStats) p.jobStats = {};
+  if (!p.jobStats[jobId]) p.jobStats[jobId] = { shifts: 0, earned: 0 };
+  p.jobStats[jobId].shifts += 1;
+  p.jobStats[jobId].earned += pay;
+
+  // 5) медленный опыт навыка (без суточного лимита практики)
+  var lvlInfo = null;
+  if (job.skill) lvlInfo = window._applySkillXp(job.skill, window.WORK_XP);
+
+  window.finishAction();
+
+  // 6) отчёт
+  window.toast("💼 " + job.name + ": смена завершена. Зарплата: +$" + pay + ".", "good");
+  if (msg) window.toast(msg, mtype);
+  if (lvlInfo && lvlInfo.leveledUp) window.toast("📈 " + window.skillName(job.skill) + " — новый уровень " + lvlInfo.level + "!", "good");
+
+  setTimeout(function(){ Engine.play("Home"); }, 0);
+};
+
+// --- Тосты (угол экрана) ---
+window.toast = function(msg, type) {
+  var box = document.getElementById("ls-toasts");
+  if (!box) {
+    box = document.createElement("div");
+    box.id = "ls-toasts";
+    document.body.appendChild(box);
+  }
+  var el = document.createElement("div");
+  el.className = "ls-toast ls-toast--" + (type || "info");
+  el.textContent = msg;
+  box.appendChild(el);
+  requestAnimationFrame(function(){ el.classList.add("ls-toast--show"); });
+  setTimeout(function(){
+    el.classList.remove("ls-toast--show");
+    el.classList.add("ls-toast--out");
+    setTimeout(function(){ if (el.parentNode) el.parentNode.removeChild(el); }, 450);
+  }, 4200);
+};
+
+// --- Реестр действий ---
+// add: {need: amount} — прибавка (clamp 0..100); cost: {need: amount} — трата.
+window.ACTIONS = {
+  watch_tv:   { room: "living_room", time: 60,  ignore: ["fun"],
+                add: { fun: 25 }, skill: null, label: "Смотреть телевизор" },
+  call:       { room: "living_room", time: 10,  ignore: ["social"],
+                add: { social: 7 }, skill: "charisma", xp: 5, label: "Поговорить по телефону" },
+  talk:       { room: "living_room", time: 30,  ignore: ["social", "fun"],
+                add: { social: 25, fun: 5 }, skill: "charisma", xp: 5, label: "Живое общение" },
+  cook:       { room: "kitchen",     time: 60,  ignore: ["energy"],
+                cost: { energy: 5 }, skill: "cooking", xp: 5, label: "Готовить" },
+  eat:        { room: "kitchen",     time: 30,  ignore: ["satiety"],
+                add: { satiety: 50 }, skill: null, label: "Поесть" },
+  shower:     { room: "bathroom",    time: 10,  ignore: ["hygiene"],
+                add: { hygiene: 100 }, skill: null, label: "Принять душ" },
+  toilet:     { room: "bathroom",    time: 2,   ignore: ["bladder"],
+                add: { bladder: 100 }, skill: null, label: "Сходить в туалет" },
+  sport:      { room: "gym",         time: 60,  ignore: ["fun", "energy", "satiety"],
+                add: { fun: 15 }, cost: { energy: 15, satiety: 5 },
+                skill: "sport", xp: 5, label: "Спорт" },
+  program:    { room: "office",      time: 120, ignore: ["energy"],
+                cost: { energy: 10 }, skill: "programming", xp: 5, label: "Программировать" },
+  draw:       { room: "workshop",    time: 60,  ignore: ["fun", "energy"],
+                add: { fun: 20 }, cost: { energy: 3 },
+                skill: "art", xp: 5, label: "Рисовать" }
+};
+
+/* ===========================================================================
+   0.0.4.1 — РУСИФИКАЦИЯ ВСТРОЕННОГО МЕНЮ (Сохранения/Настройки/Заново)
+   =========================================================================== */
+window.RU_MENU = {
+  "menu-item-continue": "Продолжить",
+  "menu-item-saves":    "💾 Сохранения",
+  "menu-item-settings": "⚙️ Настройки",
+  "menu-item-restart":  "🔄 Начать заново",
+  "menu-item-share":    "Поделиться"
+};
+window.localizeUIBar = function() {
+  try {
+    Object.keys(window.RU_MENU).forEach(function(id){
+      var li = document.getElementById(id);
+      if (li) {
+        var a = li.querySelector("a");
+        if (a) { a.textContent = window.RU_MENU[id]; a.setAttribute("data-ru","1"); }
+      }
+    });
+  } catch(e){}
+};
+jQuery(document).on(":storyready :passageend :uierr", function(){ setTimeout(window.localizeUIBar, 30); });
+jQuery(function(){ setTimeout(window.localizeUIBar, 200); });
+
+/* ===========================================================================
+   0.0.4.1 — СОН: длительность, полное восстановление, будильник
+   =========================================================================== */
+// Промотка игрового времени во сне (специальный режим для updateNeeds).
+window._sleepTick = function(minutes) {
+  var p = State.variables.game.player;
+  p.sleeping = true;
+  advanceTime(minutes, []);
+  p.sleeping = false;
+};
+// Сон фиксированное число часов (дробное допустимо: 0.5 = полчаса)
+window.sleepHours = function(hours) {
+  window.migrateGame();
+  var mins = Math.max(1, Math.round(hours * 60));
+  window._sleepTick(mins);
+  window.finishAction();
+  Engine.play("Home");
+};
+// Спать до полного восстановления энергии (с разумным пределом в 12 часов)
+window.sleepUntilFull = function() {
+  window.migrateGame();
+  var p = State.variables.game.player;
+  var n = p.needs;
+  // во сне энергия +15/ч; считаем нужные часы, чтобы дойти до 100
+  var deficit = Math.max(0, 100 - n.energy);
+  var hours = Math.min(12, Math.ceil(deficit / 15));
+  if (hours < 0.5) hours = 0.5;
+  window._sleepTick(Math.round(hours * 60));
+  n.energy = 100;
+  window.toast("😴 Вы выспались и полны сил.", "good");
+  window.finishAction();
+  Engine.play("Home");
+};
+// Сон до конкретного часа по будильнику (0..23, по умолчанию минуты 0)
+window.sleepUntilHour = function(hour, minute) {
+  window.migrateGame();
+  var t = State.variables.game.time;
+  hour = ((Math.round(hour) % 24) + 24) % 24;
+  minute = minute || 0;
+  var now = t.hour * 60 + t.minute;
+  var target = hour * 60 + minute;
+  var diff = target - now;
+  if (diff <= 0) diff += 24 * 60; // до этого времени завтра
+  window._sleepTick(diff);
+  var hh = (hour < 10 ? "0" : "") + hour;
+  var mm = (minute < 10 ? "0" : "") + minute;
+  window.toast("⏰ Будильник: вы проснулись в " + hh + ":" + mm + ".", "info");
+  window.finishAction();
+  Engine.play("Home");
+};
+// Окно будильника
+window.openAlarm = function() {
+  var t = State.variables.game.time;
+  var hours = [];
+  for (var h = 0; h < 24; h++) {
+    var hh = (h < 10 ? "0" : "") + h;
+    hours.push('<button type="button" class="ls-alarm-hour" data-hour="'+h+'" '
+      + 'style="flex:1 1 18%;margin:2px;padding:8px 0;border-radius:8px;cursor:pointer;font-size:0.95em;'
+      + 'background:#222a3d;color:#dfe5f5;border:1px solid #34405c;">'+hh+':00</button>');
+  }
+  var body = '<div class="ls-alarm">'
+    + '<p style="margin-top:0;color:#9aa4c0;font-size:0.9em;">Выберите время пробуждения. Сон продлится до ближайшего наступления этого часа.</p>'
+    + '<div style="display:flex;flex-wrap:wrap;">' + hours.join("") + '</div>'
+    + '<div style="text-align:right;margin-top:12px;">'
+    + '<button type="button" id="ls-alarm-cancel" style="padding:8px 14px;border-radius:8px;cursor:pointer;background:#2a3245;color:#c6cde0;border:1px solid #3a4566;">Отмена</button>'
+    + '</div></div>';
+  Dialog.setup("⏰ Будильник", "ls-alarm-dialog");
+  Dialog.wiki(body);
+  Dialog.open();
+  setTimeout(function(){
+    jQuery(document).find(".ls-alarm-hour").off("click.al").on("click.al", function(){
+      var h = parseInt(jQuery(this).attr("data-hour"), 10);
+      Dialog.close();
+      window.sleepUntilHour(h, 0);
+    });
+    jQuery(document).find("#ls-alarm-cancel").off("click.al").on("click.al", function(){
+      Dialog.close(); Engine.play("Sleep");
+    });
+  }, 30);
+};
+
+window.performAction = function(id) {
+  window.migrateGame();
+  var g = State.variables.game;
+  var a = window.ACTIONS[id];
+  if (!a) { window.toast("Неизвестное действие.", "warn"); return; }
+  if (a.room && g.room !== a.room) { window.toast("Это действие недоступно в этой комнате.", "warn"); return; }
+
+  var p = g.player, n = p.needs;
+  // Сон: включаем режим сна ДО промотки времени (тогда энергия восстанавливается)
+  if (a.special === "sleep") { p.sleeping = true; }
+
+  // 1) время + базовая деградация/восстановление потребностей
+  advanceTime(a.time, a.ignore || []);
+
+  // 2) стоимость (трата)
+  if (a.cost) Object.keys(a.cost).forEach(function(k){
+    var cost = a.cost[k];
+    // черта «ленивый» устаёт сильнее на энергозатратных занятиях
+    if (k === "energy" && cost > 0 && window.hasTrait && window.hasTrait("lazy")) cost = Math.round(cost * 1.4);
+    n[k] = Math.max(0, (n[k] || 0) - cost);
+  });
+  // 3) эффекты-прибавки
+  if (a.add) Object.keys(a.add).forEach(function(k){
+    n[k] = Math.min(100, (n[k] || 0) + a.add[k]);
+  });
+  // 4) конец сна
+  if (a.special === "sleep") {
+    p.sleeping = false;
+    if (n.energy >= 80) window.addMoodlet("rested");
+  }
+
+  // 5) позитивные мудлеты от действий
+  if (id === "eat"    && n.satiety >= 70) window.addMoodlet("well_fed");
+  if (id === "shower" && n.hygiene >= 90) window.addMoodlet("clean");
+  if (id === "sport"  && n.energy  >= 60) window.addMoodlet("energetic");
+  if (id === "talk"   && n.social  >= 80) window.addMoodlet("good_talk");
+  if (id === "draw"   && n.fun     >= 70) window.addMoodlet("inspired");
+  if (id === "watch_tv" && n.fun   >= 60) window.addMoodlet("amused");
+
+  // 6) опыт навыка
+  if (a.skill) { window.gainSkillXp(a.skill, a.xp || window.SKILL_XP_BASE); }
+
+  // 6b) СЛОЙ СРЫВА/ТРАВМЫ (редкий, отдельно от качества): спорт, готовка,
+  //     программирование, рисование. Применяем ДО качества, чтобы штрафы
+  //     потребностей успели сказаться на состоянии.
+  var seriousInjury = null;
+  if (["sport","cook","program","draw","repair"].indexOf(id) !== -1) {
+    var sb = window.rollSetback(id, a.skill);
+    if (sb) {
+      if (sb.energy) n.energy = Math.max(0, n.energy + sb.energy);
+      if (sb.fun)    n.fun    = Math.max(0, Math.min(100, n.fun + sb.fun));
+      window.toast(sb.text, "bad");
+      window.addMoodlet(sb.moodlet);
+      if (sb.serious) seriousInjury = sb;
+    }
+  }
+
+  // Тяжёлая травма -> срочная госпитализация (промотает сутки, вылечит, счёт).
+  if (seriousInjury) {
+    window.sendToHospital(seriousInjury.hospitalReason || "manual");
+    return; // sendToHospital сам перерисует Home; качество занятия не показываем
+  }
+
+  // 6c) КАЧЕСТВО результата занятия (всегда, 1..5) для практики навыка.
+  //     Не у разговоров/уборки, а у «созидательных» действий с видимым результатом.
+  if (["draw","cook","sport","program"].indexOf(id) !== -1) {
+    window.applyQuality(id, a.skill);
+  }
+
+  // 7) финал: критические потребности + настроение
+  window.finishAction();
+
+  // 7) перерисовать текущий пассаж
+  setTimeout(function(){ Engine.play(State.passage); }, 0);
+};
+
+/* ===========================================================================
+   0.0.4 — ОКНО «ПЕРСОНАЖ» (поверх игры, с прогрессом навыков)
+   =========================================================================== */
+window.openCharacter = function(tab) {
+  window.migrateGame();
+  var p = State.variables.game.player;
+
+  // --- Вкладка «Навыки» ---
+  function skillsTab() {
+    var rows = window.SKILLS.map(function(k){
+      var sk = window.getSkill(k.id);
+      var lvl = sk.level, max = window.SKILL_MAX_LEVEL;
+      var need = (lvl >= max) ? null : window.skillXpNeed(lvl);
+      var pct  = (lvl >= max) ? 100 : Math.max(0, Math.min(100, Math.round(sk.xp / need * 100)));
+      var dailyUsed = p.skillDaily[k.id] || 0;   // число занятий сегодня
+      var tired = dailyUsed >= window.SKILL_DAILY_ACTIONS;
+      var bar =
+        '<div style="background:#1a2030;border-radius:6px;overflow:hidden;height:10px;margin-top:4px;box-sizing:border-box;">' +
+          '<div style="height:100%;width:'+pct+'%;background:'+(tired?'#e0a63d':'#3fb96b')+';transition:width .3s;box-sizing:border-box;"></div>' +
+        '</div>';
+      var sub = (lvl >= max)
+        ? 'Максимальный уровень'
+        : ('Опыт '+sk.xp+' / '+need + ' · практика сегодня '+dailyUsed+'/'+window.SKILL_DAILY_ACTIONS
+           + (tired ? ' (на сегодня хватит — отдых)' : ''));
+      return '<div style="display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.07);">'
+        + '<div style="flex:1;">'
+          + '<div style="font-weight:600;"><span style="margin-right:6px;">'+(k.icon||"⭐")+'</span>'+k.name+'</div>'
+          + bar
+          + '<div style="font-size:0.78em;color:#9aa4c0;margin-top:3px;">'+sub+'</div>'
+        + '</div>'
+        + '<div style="font-weight:700;font-size:1.15em;color:#5fd68a;min-width:34px;text-align:right;">'+lvl+'</div>'
+      + '</div>';
+    }).join("");
+    return '<h3 style="margin-top:0;">📊 Навыки</h3>'
+      + '<p style="font-size:0.85em;color:#9aa4c0;margin-top:0;">Навыки растут от занятий (по +5 опыта за раз). В день доступно до '+window.SKILL_DAILY_ACTIONS+' занятий одного навыка — потом нужен отдых до завтра.</p>'
+      + rows;
+  }
+
+  // --- Вкладка «Основное» ---
+  function mainTab() {
+    var look = (typeof window.getAppearanceDescription === "function") ? window.getAppearanceDescription() : "—";
+    return '<h3 style="margin-top:0;">👤 Основное</h3>'
+      + '<div style="line-height:1.7;font-size:0.95em;">'
+      + '<div><strong>Имя:</strong> '+ (p.name||'—') + ' ' + (p.surname||'') + '</div>'
+      + '<div><strong>Возраст:</strong> '+(p.age||'—')+' · <strong>Пол:</strong> '+(p.gender||'—')+'</div>'
+      + '<div><strong>Работа:</strong> '+(p.job ? 'есть' : 'пока нет')+' <span style="color:#9aa4c0;">(появится в 0.0.4e)</span></div>'
+      + '<div style="margin-top:6px;"><strong>Внешность:</strong> '+look+'</div>'
+      + '<div style="margin-top:6px;color:#9aa4c0;">Одежда, отношения (друзья/семья), репутация — <span style="color:#c9a24a;">🔜 появятся позже</span>.</div>'
+      + '</div>';
+  }
+
+  // --- Вкладка «Статистика» ---
+  function statsTab() {
+    var t = State.variables.game.time || {}, st = p.stats || {};
+    return '<h3 style="margin-top:0;">📈 Статистика</h3>'
+      + '<div style="line-height:1.9;font-size:0.95em;">'
+      + '<div>🗓️ День в игре: <strong>'+(t.totalDays||1)+'</strong></div>'
+      + '<div>💵 Денег: <strong>$'+p.money+'</strong></div>'
+      + '<div>💰 Всего заработано: <strong>$'+(st.moneyEarned||0)+'</strong></div>'
+      + '<div>🛠️ Смен отработано: <strong>'+(st.shiftsWorked||0)+'</strong> <span style="color:#9aa4c0;">(работа — в 0.0.4e)</span></div>'
+      + '<div>🎨 Работ продано: <strong>'+(st.artSold||0)+'</strong></div>'
+      + '<div>🏥 Госпитализаций: <strong>'+(st.hospitalVisits||0)+'</strong></div>'
+      + '</div>';
+  }
+
+  // --- Вкладка «Работа» ---
+  function workTab() {
+    var js = p.jobStats || {};
+    var anyWork = window.JOBS.some(function(j){ return js[j.id] && js[j.id].shifts > 0; });
+    var rows = window.JOBS.map(function(j){
+      var st = js[j.id] || { shifts: 0, earned: 0 };
+      var lvl = (j.skill && window.skillLevel) ? window.skillLevel(j.skill) : 1;
+      // стаж: каждые 10 смен — одно деление заполнения (пока декоративно)
+      var fills = Math.min(10, st.shifts);
+      var seg = [];
+      for (var i = 0; i < 10; i++) {
+        seg.push('<div style="flex:1;height:8px;border-radius:2px;background:'+(i < fills ? '#3fb96b' : '#1a2030')+';"></div>');
+      }
+      return '<div style="padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.07);">'
+        + '<div style="font-weight:600;">'+j.icon+' '+j.name
+          + ' <span style="font-weight:400;color:#9aa4c0;font-size:0.82em;">· навык '+(window.skillIcon(j.skill)||"")+' '+(j.skill?window.skillName(j.skill):"—")+' · ур. '+lvl+'</span></div>'
+        + '<div style="display:flex;gap:3px;margin-top:5px;">'+seg.join("")+'</div>'
+        + '<div style="font-size:0.78em;color:#9aa4c0;margin-top:3px;">Отработано смен: <strong style="color:#dfe5f5;">'+st.shifts+'</strong>'
+          + ' · заработано: <strong style="color:#7fe0a0;">$'+st.earned+'</strong>'
+          + (fills >= 10 ? ' · стаж заполнен' : '')+'</div>'
+      + '</div>';
+    }).join("");
+    return '<h3 style="margin-top:0;">💼 Работа</h3>'
+      + '<p style="font-size:0.85em;color:#9aa4c0;margin-top:0;">Подработка из прихожей (смена 8 ч). Навык на работе растёт медленнее. Зелёные деления — стаж работы (каждое ≈ 10 смен).</p>'
+      + (anyWork ? '' : '<p style="color:#9aa4c0;font-size:0.9em;">Вы ещё не работали. В прихожей выберите «💼 Пойти на работу».</p>')
+      + rows;
+  }
+
+  tab = tab || "skills";
+  var body = '<div class="ls-char-dialog">'
+    + '<div class="ls-char-tabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">'
+    + [["main","👤 Основное"],["skills","📊 Навыки"],["work","💼 Работа"],["stats","📈 Статистика"]].map(function(tp){
+        var active = tp[0]===tab;
+        return '<button type="button" class="ls-char-tab" data-lstab="'+tp[0]+'" '
+          + 'style="padding:6px 12px;border-radius:8px;cursor:pointer;font-size:0.9em;'
+          + 'background:'+(active?'#4d7cfe':'#222a3d')+';color:'+(active?'#fff':'#c6cde0')+';border:1px solid '+(active?'#4d7cfe':'#34405c')+';">'
+          + tp[1]+'</button>';
+      }).join("")
+    + '</div>'
+    + '<div class="ls-char-body">' + (tab==="main"?mainTab():tab==="stats"?statsTab():tab==="work"?workTab():skillsTab()) + '</div>'
+    + '</div>';
+
+  Dialog.setup("Персонаж", "ls-char-dialog-wrap");
+  Dialog.wiki(body);
+  Dialog.open();
+  // переключение вкладок внутри окна
+  setTimeout(function(){
+    jQuery(document).find(".ls-char-tab").off("click.lstab").on("click.lstab", function(){
+      window.openCharacter(jQuery(this).attr("data-lstab"));
+    });
+  }, 30);
+};
+
+
+// Рендер особенностей (тумблеры)
 window.renderFeaturesSection = function() {
   var f = State.variables.game.player.appearance.features;
   var out = "<div class=\"cc-features\">";
   Object.keys(window.FEATURE_OPTIONS).forEach(function(key) {
     var on = !!f[key];
-    out += "<button class=\"cc-feature" + (on ? " cc-feature--on" : "") + "\" onclick=\"window.toggleFeature('" + key + "')\">"
+    out += "<button type=\"button\" class=\"cc-feature" + (on ? " cc-feature--on" : "") + "\" data-cc-toggle=\"" + key + "\">"
       + (on ? "✓ " : "") + window.FEATURE_OPTIONS[key] + "</button>";
   });
   return out + "</div>";
+};
+
+// Рендер черт (с data-привязкой)
+window.renderTraits = function() {
+  var t = State.variables.game.player.traits || [];
+  function traitBtn(tr) {
+    var on = t.indexOf(tr.id) !== -1;
+    var sign = tr.sign === "pos" ? ("−" + tr.cost) : ("+" + tr.cost);
+    var label = (on ? "✓ " : "") + tr.name + " (" + sign + ")";
+    return "<div class=\"cc-trait\"><div class=\"cc-trait-head\">"
+      + "<button type=\"button\" data-cc-trait=\"" + tr.id + "\">" + label + "</button></div>"
+      + "<div class=\"cc-trait-desc\">" + tr.desc + "</div></div>";
+  }
+  var pos = window.TRAITS.filter(function(x){return x.sign==="pos";}).sort(function(a,b){return a.cost-b.cost;});
+  var neg = window.TRAITS.filter(function(x){return x.sign==="neg";}).sort(function(a,b){return a.cost-b.cost;});
+  return "<div class=\"cc-block\"><h2>Положительные (тратят очки)</h2>" + pos.map(traitBtn).join("") + "</div>"
+    + "<div class=\"cc-block\"><h2>Отрицательные (дают очки)</h2>" + neg.map(traitBtn).join("") + "</div>";
 };
 
 window.getTraitsList = function() {
@@ -1459,7 +2638,17 @@ window.finishCharacterCreation = function() {
       repair: 1,
       gardening: 1
     },
-    housing: null
+    housing: null,
+    skillDaily: {},
+    skillCappedToday: [],
+    stats: {
+      moneyEarned: 0,
+      moneySpent: 0,
+      shiftsWorked: 0,
+      daysPlayed: 1,
+      artSold: 0,
+      hospitalVisits: 0
+    }
   },
   time: {
     minute: 0,
@@ -1468,7 +2657,8 @@ window.finishCharacterCreation = function() {
     month: 1,
     year: 1,
     totalDays: 1,
-    weekday: "Понедельник"
+    weekday: "Понедельник",
+    clock: 0
   },
   world: {
     seed: null,
@@ -1500,11 +2690,18 @@ window.finishCharacterCreation = function() {
   &lt;div class="money"&gt;
     💵 &lt;&lt;= $game.player.money &gt;&gt;
   &lt;/div&gt;
+  &lt;&lt;if $game.player.debt gt 0&gt;&gt;
+  &lt;div class="debt-banner" title="Долг за лечение. Заработайте и погасите его через больницу или телефон."&gt;
+    🚨 Долг: &lt;strong&gt;$&lt;&lt;= $game.player.debt &gt;&gt;&lt;/strong&gt;
+  &lt;/div&gt;
+  &lt;&lt;/if&gt;&gt;
 
   &lt;&lt;print window.renderNeedsPanel()&gt;&gt;
 
+  &lt;&lt;print window.renderMoodletPanel()&gt;&gt;
+
   &lt;div class="menu-buttons"&gt;
-    &lt;&lt;button "СТАТИСТИКА"&gt;&gt;&lt;&lt;run alert("Статистика")&gt;&gt;&lt;&lt;/button&gt;&gt;
+    &lt;&lt;button "👤 ПЕРСОНАЖ"&gt;&gt;&lt;&lt;run window.openCharacter("skills")&gt;&gt;&lt;&lt;/button&gt;&gt;
     &lt;&lt;button "ИНВЕНТАРЬ"&gt;&gt;&lt;&lt;run alert("Инвентарь")&gt;&gt;&lt;&lt;/button&gt;&gt;
     &lt;&lt;button "ТЕЛЕФОН"&gt;&gt;&lt;&lt;run alert("Телефон")&gt;&gt;&lt;&lt;/button&gt;&gt;
     &lt;&lt;button "КАРТА"&gt;&gt;&lt;&lt;run alert("Карта")&gt;&gt;&lt;&lt;/button&gt;&gt;
@@ -1533,35 +2730,39 @@ window.finishCharacterCreation = function() {
   &lt;h2&gt;🎯 Действия&lt;/h2&gt;
   &lt;div class="actions-list"&gt;
     &lt;&lt;if $game.room == "living_room"&gt;&gt;
-      &lt;&lt;link "📺 Смотреть телевизор (до +25 досуга, 1 час)"&gt;&gt;&lt;&lt;run advanceTime(60, ['fun'])&gt;&gt;&lt;&lt;set $game.player.needs.fun = Math.min(100, $game.player.needs.fun + 25)&gt;&gt;&lt;&lt;run finishAction()&gt;&gt;&lt;&lt;goto "Home"&gt;&gt;&lt;&lt;/link&gt;&gt;
-      &lt;&lt;link "📱 Поговорить по телефону (до +7 общения, 10 мин)"&gt;&gt;&lt;&lt;run advanceTime(10, ['social'])&gt;&gt;&lt;&lt;set $game.player.needs.social = Math.min(100, $game.player.needs.social + 7)&gt;&gt;&lt;&lt;run finishAction()&gt;&gt;&lt;&lt;goto "Home"&gt;&gt;&lt;&lt;/link&gt;&gt;
-      &lt;&lt;link "🗣️ Живое общение (до +25 общения, до +5 досуга, 30 мин)"&gt;&gt;&lt;&lt;run advanceTime(30, ['social', 'fun'])&gt;&gt;&lt;&lt;set $game.player.needs.social = Math.min(100, $game.player.needs.social + 25)&gt;&gt;&lt;&lt;set $game.player.needs.fun = Math.min(100, $game.player.needs.fun + 5)&gt;&gt;&lt;&lt;run finishAction()&gt;&gt;&lt;&lt;goto "Home"&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "📺 Смотреть телевизор (до +25 досуга, 1 час)"&gt;&gt;&lt;&lt;run performAction(&quot;watch_tv&quot;)&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "📱 Поговорить по телефону (до +7 общения, 10 мин)"&gt;&gt;&lt;&lt;run performAction(&quot;call&quot;)&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "🗣️ Живое общение (до +25 общения, до +5 досуга, 30 мин)"&gt;&gt;&lt;&lt;run performAction(&quot;talk&quot;)&gt;&gt;&lt;&lt;/link&gt;&gt;
     &lt;&lt;/if&gt;&gt;
     &lt;&lt;if $game.room == "kitchen"&gt;&gt;
-      &lt;&lt;link "🍳 Готовить (-5 энергии, 1 час)"&gt;&gt;&lt;&lt;run advanceTime(60, ['energy'])&gt;&gt;&lt;&lt;set $game.player.needs.energy = Math.max(0, $game.player.needs.energy - 5)&gt;&gt;&lt;&lt;run finishAction()&gt;&gt;&lt;&lt;goto "Home"&gt;&gt;&lt;&lt;/link&gt;&gt;
-      &lt;&lt;link "🍔 Поесть (до +50 сытости, 30 мин)"&gt;&gt;&lt;&lt;run advanceTime(30, ['satiety'])&gt;&gt;&lt;&lt;set $game.player.needs.satiety = Math.min(100, $game.player.needs.satiety + 50)&gt;&gt;&lt;&lt;run finishAction()&gt;&gt;&lt;&lt;goto "Home"&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "🍳 Готовить (-5 энергии, 1 час)"&gt;&gt;&lt;&lt;run performAction(&quot;cook&quot;)&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "🍔 Поесть (до +50 сытости, 30 мин)"&gt;&gt;&lt;&lt;run performAction(&quot;eat&quot;)&gt;&gt;&lt;&lt;/link&gt;&gt;
     &lt;&lt;/if&gt;&gt;
     &lt;&lt;if $game.room == "bedroom"&gt;&gt;
-      &lt;&lt;link "😴 Спать 8 часов"&gt;&gt;&lt;&lt;set $game.player.sleeping = true&gt;&gt;&lt;&lt;run advanceTime(480)&gt;&gt;&lt;&lt;set $game.player.sleeping = false&gt;&gt;&lt;&lt;run finishAction()&gt;&gt;&lt;&lt;goto "Home"&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link &quot;😴 Лечь спать…&quot;&gt;&gt;&lt;&lt;goto &quot;Sleep&quot;&gt;&gt;&lt;&lt;/link&gt;&gt;
     &lt;&lt;/if&gt;&gt;
     &lt;&lt;if $game.room == "bathroom"&gt;&gt;
-      &lt;&lt;link "🚿 Принять душ (гигиена до 100, 10 мин)"&gt;&gt;&lt;&lt;run advanceTime(10, ['hygiene'])&gt;&gt;&lt;&lt;set $game.player.needs.hygiene = 100&gt;&gt;&lt;&lt;run finishAction()&gt;&gt;&lt;&lt;goto "Home"&gt;&gt;&lt;&lt;/link&gt;&gt;
-      &lt;&lt;link "🚽 Сходить в туалет (до 100, 2 мин)"&gt;&gt;&lt;&lt;run advanceTime(2, ['bladder'])&gt;&gt;&lt;&lt;set $game.player.needs.bladder = 100&gt;&gt;&lt;&lt;run finishAction()&gt;&gt;&lt;&lt;goto "Home"&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "🚿 Принять душ (гигиена до 100, 10 мин)"&gt;&gt;&lt;&lt;run performAction(&quot;shower&quot;)&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "🚽 Сходить в туалет (до 100, 2 мин)"&gt;&gt;&lt;&lt;run performAction(&quot;toilet&quot;)&gt;&gt;&lt;&lt;/link&gt;&gt;
     &lt;&lt;/if&gt;&gt;
     &lt;&lt;if $game.room == "gym"&gt;&gt;
-      &lt;&lt;link "🏋️ Спорт (до +15 досуга, -15 энергии, -5 сытости, 1 час)"&gt;&gt;&lt;&lt;run advanceTime(60, ['fun', 'energy', 'satiety'])&gt;&gt;&lt;&lt;set $game.player.needs.fun = Math.min(100, $game.player.needs.fun + 15)&gt;&gt;&lt;&lt;set $game.player.needs.energy = Math.max(0, $game.player.needs.energy - 15)&gt;&gt;&lt;&lt;set $game.player.needs.satiety = Math.max(0, $game.player.needs.satiety - 5)&gt;&gt;&lt;&lt;run finishAction()&gt;&gt;&lt;&lt;goto "Home"&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "🏋️ Спорт (до +15 досуга, -15 энергии, -5 сытости, 1 час)"&gt;&gt;&lt;&lt;run performAction(&quot;sport&quot;)&gt;&gt;&lt;&lt;/link&gt;&gt;
     &lt;&lt;/if&gt;&gt;
     &lt;&lt;if $game.room == "office"&gt;&gt;
-      &lt;&lt;link "💻 Программировать (-10 энергии, 2 часа)"&gt;&gt;&lt;&lt;run advanceTime(120, ['energy'])&gt;&gt;&lt;&lt;set $game.player.needs.energy = Math.max(0, $game.player.needs.energy - 10)&gt;&gt;&lt;&lt;run finishAction()&gt;&gt;&lt;&lt;goto "Home"&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "💻 Программировать (-10 энергии, 2 часа)"&gt;&gt;&lt;&lt;run performAction(&quot;program&quot;)&gt;&gt;&lt;&lt;/link&gt;&gt;
     &lt;&lt;/if&gt;&gt;
     &lt;&lt;if $game.room == "workshop"&gt;&gt;
-      &lt;&lt;link "🎨 Рисовать (до +20 досуга, -3 энергии, 1 час)"&gt;&gt;&lt;&lt;run advanceTime(60, ['fun', 'energy'])&gt;&gt;&lt;&lt;set $game.player.needs.fun = Math.min(100, $game.player.needs.fun + 20)&gt;&gt;&lt;&lt;set $game.player.needs.energy = Math.max(0, $game.player.needs.energy - 3)&gt;&gt;&lt;&lt;run finishAction()&gt;&gt;&lt;&lt;goto "Home"&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "🎨 Рисовать (до +20 досуга, -3 энергии, 1 час)"&gt;&gt;&lt;&lt;run performAction(&quot;draw&quot;)&gt;&gt;&lt;&lt;/link&gt;&gt;
     &lt;&lt;/if&gt;&gt;
     &lt;&lt;if $game.room == "garage"&gt;&gt;
       &lt;p&gt;Здесь пока пусто. Позже появится транспорт и инструменты.&lt;/p&gt;
     &lt;&lt;/if&gt;&gt;
     &lt;&lt;if $game.room == "hallway"&gt;&gt;
-      &lt;p&gt;Вы в прихожей. Отсюда можно будет выйти на улицу.&lt;/p&gt;
+      &lt;p&gt;Вы в прихожей. Отсюда можно будет выйти на улицу. А пока — подработать.&lt;/p&gt;
+      &lt;div class="cc-buttons is-vertical"&gt;
+        &lt;&lt;link "💼 Пойти на работу…"&gt;&gt;&lt;&lt;goto "Work"&gt;&gt;&lt;&lt;/link&gt;&gt;
+        &lt;&lt;link "🏥 Поехать в больницу…"&gt;&gt;&lt;&lt;goto "Hospital"&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;/div&gt;
     &lt;&lt;/if&gt;&gt;
     &lt;&lt;if $game.room == "terrace"&gt;&gt;
       &lt;p&gt;Терраса. Свежий воздух и растения.&lt;/p&gt;
@@ -1590,6 +2791,57 @@ window.finishCharacterCreation = function() {
     &lt;&lt;link "✨ Установить все потребности на 100"&gt;&gt;&lt;&lt;set $game.player.needs.energy = 100&gt;&gt;&lt;&lt;set $game.player.needs.satiety = 100&gt;&gt;&lt;&lt;set $game.player.needs.hygiene = 100&gt;&gt;&lt;&lt;set $game.player.needs.social = 100&gt;&gt;&lt;&lt;set $game.player.needs.fun = 100&gt;&gt;&lt;&lt;set $game.player.needs.bladder = 100&gt;&gt;&lt;&lt;run updateMood()&gt;&gt;&lt;&lt;goto "Home"&gt;&gt;&lt;&lt;/link&gt;&gt;
   &lt;/div&gt;
 &lt;/section&gt;
+&lt;&lt;/nobr&gt;&gt;</tw-passagedata><tw-passagedata pid="902" name="Work" tags="" position="900,1050" size="100,100">&lt;&lt;nobr&gt;&gt;
+&lt;div class="character-creation"&gt;
+  &lt;div class="cc-main-title"&gt;💼 Работа&lt;/div&gt;
+  &lt;h1 class="cc-step-title"&gt;Кем хотите подработать?&lt;/h1&gt;
+  &lt;div class="cc-block" style="max-width:560px;margin:0 auto;"&gt;
+    &lt;p class="cc-hint"&gt;Смена длится 8 часов, устаёте и тратите сытость. Навык растёт медленно, бывают удачные смены и не очень.&lt;/p&gt;
+    &lt;div class="cc-buttons is-vertical"&gt;
+      &lt;&lt;link "🏷️ Продавец (обаяние, ~$50 за смену)"&gt;&gt;&lt;&lt;run window.workShift("seller")&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "🍽️ Официант (обаяние + чаевые, ~$55)"&gt;&gt;&lt;&lt;run window.workShift("waiter")&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "🍳 Повар (кулинария, ~$60)"&gt;&gt;&lt;&lt;run window.workShift("cook")&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "📦 Грузчик (сила, ~$70 за смену)"&gt;&gt;&lt;&lt;run window.workShift("loader")&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "🚶 Вернуться домой"&gt;&gt;&lt;&lt;goto "Home"&gt;&gt;&lt;&lt;/link&gt;&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+&lt;&lt;/nobr&gt;&gt;</tw-passagedata><tw-passagedata pid="903" name="Hospital" tags="" position="1100,1050" size="100,100">&lt;&lt;nobr&gt;&gt;
+<div class="character-creation">
+  &lt;div class="cc-main-title"&gt;🏥 Больница&lt;/div&gt;
+  &lt;h1 class="cc-step-title"&gt;Вас осматривает врач&lt;/h1&gt;
+  &lt;div class="cc-block" style="max-width:560px;margin:0 auto;"&gt;
+    &lt;p class="cc-hint"&gt;За лечение больница берёт &lt;strong&gt;$&lt;&lt;= window.HOSPITAL_COST &gt;&gt;&lt;/strong&gt;. Лечение занимает сутки: вы отдохнёте, придёте в себя, все травмы и ожоги пройдут, потребности восстановятся.&lt;/p&gt;
+    &lt;p class="cc-hint"&gt;Если денег не хватит, недостающая сумма уйдёт в &lt;strong&gt;долг&lt;/strong&gt; — он будет висеть красной плашкой, пока не расплатитесь.&lt;/p&gt;
+    &lt;div class="cc-buttons is-vertical"&gt;
+      &lt;&lt;link "💊 Пройти лечение (-$&lt;&lt;= window.HOSPITAL_COST &gt;&gt;, сутки)"&gt;&gt;&lt;&lt;run window.goHospitalVoluntary()&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "🚶 Уйти домой"&gt;&gt;&lt;&lt;goto "Home"&gt;&gt;&lt;&lt;/link&gt;&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+</div>
+&lt;&lt;/nobr&gt;&gt;</tw-passagedata><tw-passagedata pid="901" name="Sleep" tags="" position="900,900" size="100,100">&lt;&lt;nobr&gt;&gt;
+&lt;div class="character-creation"&gt;
+  &lt;div class="cc-main-title"&gt;🛏️ Сон&lt;/div&gt;
+  &lt;h1 class="cc-step-title"&gt;Сколько вы хотите спать?&lt;/h1&gt;
+
+  &lt;div class="cc-block" style="max-width:560px;margin:0 auto;"&gt;
+    &lt;p class="cc-hint"&gt;Сон восстанавливает энергию, но тратит время. Пока вы спите, понемногу снижаются сытость и другие потребности.&lt;/p&gt;&lt;p class="location-time"&gt;Сейчас &lt;&lt;= window.formatTime() &gt;&gt;.&lt;/p&gt;
+
+    &lt;div class="cc-buttons is-vertical"&gt;
+      &lt;&lt;link "😴 Спать до полного восстановления энергии"&gt;&gt;&lt;&lt;run window.sleepUntilFull()&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "⏰ Выставить будильник (выбрать время пробуждения)"&gt;&gt;&lt;&lt;run window.openAlarm()&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "12 часов"&gt;&gt;&lt;&lt;run window.sleepHours(12)&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "10 часов"&gt;&gt;&lt;&lt;run window.sleepHours(10)&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "8 часов"&gt;&gt;&lt;&lt;run window.sleepHours(8)&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "6 часов"&gt;&gt;&lt;&lt;run window.sleepHours(6)&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "4 часа"&gt;&gt;&lt;&lt;run window.sleepHours(4)&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "2 часа"&gt;&gt;&lt;&lt;run window.sleepHours(2)&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "1 час"&gt;&gt;&lt;&lt;run window.sleepHours(1)&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "Полчаса (вздремнуть)"&gt;&gt;&lt;&lt;run window.sleepHours(0.5)&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "🚶 Встать с кровати (не спать)"&gt;&gt;&lt;&lt;goto "Home"&gt;&gt;&lt;&lt;/link&gt;&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
 &lt;&lt;/nobr&gt;&gt;</tw-passagedata><tw-passagedata pid="7" name="Main" tags="" position="800,825" size="100,100">&lt;&lt;nobr&gt;&gt;
 &lt;div class="main-menu"&gt;
   &lt;h1 class="game-title"&gt;LifeSim&lt;/h1&gt;
@@ -1708,7 +2960,8 @@ window.finishCharacterCreation = function() {
       &lt;/div&gt;
       &lt;div class="cc-select-row"&gt;&lt;span class="cc-slider-label"&gt;Брови:&lt;/span&gt;
         &lt;&lt;listbox "$game.player.appearance.browShape" autoselect&gt;&gt;
-          &lt;&lt;option "Прямые" "straight"&gt;&gt;&lt;&lt;option "Изогнутые" "arched"&gt;&gt;&lt;&lt;option "Густые" "thick"&gt;&gt;&lt;&lt;option "Тонкие" "thin"&gt;&gt;
+          &lt;&lt;option "Прямые" "straight"&gt;&gt;&lt;&lt;option "Изогнутые" "arched"&gt;&gt;
+          &lt;&lt;option "Густые" "thick"&gt;&gt;&lt;&lt;option "Тонкие" "thin"&gt;&gt;
         &lt;&lt;/listbox&gt;&gt;
       &lt;/div&gt;
       &lt;div class="cc-select-row"&gt;&lt;span class="cc-slider-label"&gt;Уши:&lt;/span&gt;
@@ -1721,17 +2974,49 @@ window.finishCharacterCreation = function() {
 
     &lt;div class="cc-block"&gt;
       &lt;h2&gt;Волосы&lt;/h2&gt;
-      &lt;&lt;print window.renderHairSection()&gt;&gt;
-      &lt;&lt;if $game.player.gender == "муж"&gt;&gt;
-        &lt;div class="cc-select-row"&gt;&lt;span class="cc-slider-label"&gt;Растительность на лице:&lt;/span&gt;
-          &lt;&lt;listbox "$game.player.appearance.facialHair" autoselect&gt;&gt;
-            &lt;&lt;option "Нет" "none"&gt;&gt;&lt;&lt;option "Лёгкая щетина" "light_stubble"&gt;&gt;&lt;&lt;option "Щетина" "stubble"&gt;&gt;
-            &lt;&lt;option "Усы" "mustache"&gt;&gt;&lt;&lt;option "Козлиная бородка" "goatee"&gt;&gt;&lt;&lt;option "Короткая борода" "short_beard"&gt;&gt;
-            &lt;&lt;option "Густая борода" "full_beard"&gt;&gt;&lt;&lt;option "Борода и усы" "beard_mustache"&gt;&gt;
+      &lt;div class="cc-select-row"&gt;&lt;span class="cc-slider-label"&gt;Длина:&lt;/span&gt;
+        &lt;&lt;listbox "$game.player.appearance.hairLength" autoselect&gt;&gt;
+          &lt;&lt;option "Лысый" 1&gt;&gt;&lt;&lt;option "Очень короткие" 2&gt;&gt;&lt;&lt;option "Короткие" 3&gt;&gt;
+          &lt;&lt;option "Средние" 4&gt;&gt;&lt;&lt;option "Длинные" 5&gt;&gt;
+        &lt;&lt;/listbox&gt;&gt;
+      &lt;/div&gt;
+      &lt;&lt;if $game.player.appearance.hairLength !== 1&gt;&gt;
+        &lt;div class="cc-select-row"&gt;&lt;span class="cc-slider-label"&gt;Цвет:&lt;/span&gt;
+          &lt;&lt;listbox "$game.player.appearance.hairColor" autoselect&gt;&gt;
+            &lt;&lt;option "Чёрные" "black"&gt;&gt;&lt;&lt;option "Тёмные" "dark"&gt;&gt;&lt;&lt;option "Каштановые" "brown"&gt;&gt;
+            &lt;&lt;option "Русые" "light_brown"&gt;&gt;&lt;&lt;option "Светлые" "blonde"&gt;&gt;&lt;&lt;option "Рыжие" "red"&gt;&gt;
+            &lt;&lt;option "Седые" "gray"&gt;&gt;&lt;&lt;option "Розовые" "pink"&gt;&gt;&lt;&lt;option "Синие" "blue"&gt;&gt;
           &lt;&lt;/listbox&gt;&gt;
         &lt;/div&gt;
+        &lt;&lt;if $game.player.appearance.hairLength &gt;= 3&gt;&gt;
+          &lt;div class="cc-select-row"&gt;&lt;span class="cc-slider-label"&gt;Тип волос:&lt;/span&gt;
+            &lt;&lt;listbox "$game.player.appearance.hairTexture" autoselect&gt;&gt;
+              &lt;&lt;option "Прямые" "straight"&gt;&gt;&lt;&lt;option "Волнистые" "wavy"&gt;&gt;&lt;&lt;option "Кудрявые" "curly"&gt;&gt;
+            &lt;&lt;/listbox&gt;&gt;
+          &lt;/div&gt;
+        &lt;&lt;/if&gt;&gt;
+        &lt;div class="cc-select-row"&gt;&lt;span class="cc-slider-label"&gt;Причёска:&lt;/span&gt;
+          &lt;&lt;listbox "$game.player.appearance.hairStyle" autoselect&gt;&gt;
+            &lt;&lt;optionsfrom window.getHairStyleOptions()&gt;&gt;
+          &lt;&lt;/listbox&gt;&gt;
+        &lt;/div&gt;
+      &lt;&lt;else&gt;&gt;
+        &lt;p class="cc-hint"&gt;Причёска и тип волос не выбираются — нет волос.&lt;/p&gt;
       &lt;&lt;/if&gt;&gt;
     &lt;/div&gt;
+
+    &lt;&lt;if $game.player.gender == "муж"&gt;&gt;
+    &lt;div class="cc-block"&gt;
+      &lt;h2&gt;Растительность на лице&lt;/h2&gt;
+      &lt;div class="cc-select-row"&gt;&lt;span class="cc-slider-label"&gt;Борода / усы:&lt;/span&gt;
+        &lt;&lt;listbox "$game.player.appearance.facialHair" autoselect&gt;&gt;
+          &lt;&lt;option "Нет" "none"&gt;&gt;&lt;&lt;option "Лёгкая щетина" "light_stubble"&gt;&gt;&lt;&lt;option "Щетина" "stubble"&gt;&gt;
+          &lt;&lt;option "Усы" "mustache"&gt;&gt;&lt;&lt;option "Козлиная бородка" "goatee"&gt;&gt;&lt;&lt;option "Короткая борода" "short_beard"&gt;&gt;
+          &lt;&lt;option "Густая борода" "full_beard"&gt;&gt;&lt;&lt;option "Борода и усы" "beard_mustache"&gt;&gt;
+        &lt;&lt;/listbox&gt;&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+    &lt;&lt;/if&gt;&gt;
 
     &lt;div class="cc-block"&gt;
       &lt;h2&gt;Особые приметы&lt;/h2&gt;
@@ -1740,9 +3025,8 @@ window.finishCharacterCreation = function() {
     &lt;/div&gt;
   &lt;/div&gt;
 
-  &lt;p class="cc-hint"&gt;Описание обновляется после перехода на следующий шаг и возврата (или по кнопке ниже).&lt;/p&gt;
+  &lt;p class="cc-hint"&gt;Описание обновляется при каждом изменении.&lt;/p&gt;
   &lt;div class="cc-buttons"&gt;
-    &lt;&lt;link "🔄 Обновить описание"&gt;&gt;&lt;&lt;goto "CharacterStep2"&gt;&gt;&lt;&lt;/link&gt;&gt;
     &lt;&lt;link "← Назад"&gt;&gt;&lt;&lt;goto "CharacterCreation"&gt;&gt;&lt;&lt;/link&gt;&gt;
     &lt;&lt;link "Далее →"&gt;&gt;&lt;&lt;goto "CharacterStep3"&gt;&gt;&lt;&lt;/link&gt;&gt;
   &lt;/div&gt;
@@ -1776,7 +3060,7 @@ window.finishCharacterCreation = function() {
         &lt;span class="cc-skill-name"&gt;&lt;&lt;= window.skillName("cooking") &gt;&gt;&lt;/span&gt;
         &lt;span class="cc-skill-controls"&gt;
           &lt;&lt;button "−"&gt;&gt;&lt;&lt;run window.skillDec("cooking")&gt;&gt;&lt;&lt;goto "CharacterStep4"&gt;&gt;&lt;&lt;/button&gt;&gt;
-          &lt;span class="cc-skill-level"&gt;&lt;&lt;= $game.player.skills.cooking &gt;&gt;&lt;/span&gt;
+          &lt;span class="cc-skill-level"&gt;&lt;&lt;= window.skillLevel(&quot;cooking&quot;) &gt;&gt;&lt;/span&gt;
           &lt;&lt;button "+"&gt;&gt;&lt;&lt;run window.skillInc("cooking")&gt;&gt;&lt;&lt;goto "CharacterStep4"&gt;&gt;&lt;&lt;/button&gt;&gt;
         &lt;/span&gt;
       &lt;/div&gt;
@@ -1784,7 +3068,7 @@ window.finishCharacterCreation = function() {
         &lt;span class="cc-skill-name"&gt;&lt;&lt;= window.skillName("cleaning") &gt;&gt;&lt;/span&gt;
         &lt;span class="cc-skill-controls"&gt;
           &lt;&lt;button "−"&gt;&gt;&lt;&lt;run window.skillDec("cleaning")&gt;&gt;&lt;&lt;goto "CharacterStep4"&gt;&gt;&lt;&lt;/button&gt;&gt;
-          &lt;span class="cc-skill-level"&gt;&lt;&lt;= $game.player.skills.cleaning &gt;&gt;&lt;/span&gt;
+          &lt;span class="cc-skill-level"&gt;&lt;&lt;= window.skillLevel(&quot;cleaning&quot;) &gt;&gt;&lt;/span&gt;
           &lt;&lt;button "+"&gt;&gt;&lt;&lt;run window.skillInc("cleaning")&gt;&gt;&lt;&lt;goto "CharacterStep4"&gt;&gt;&lt;&lt;/button&gt;&gt;
         &lt;/span&gt;
       &lt;/div&gt;
@@ -1792,7 +3076,7 @@ window.finishCharacterCreation = function() {
         &lt;span class="cc-skill-name"&gt;&lt;&lt;= window.skillName("charisma") &gt;&gt;&lt;/span&gt;
         &lt;span class="cc-skill-controls"&gt;
           &lt;&lt;button "−"&gt;&gt;&lt;&lt;run window.skillDec("charisma")&gt;&gt;&lt;&lt;goto "CharacterStep4"&gt;&gt;&lt;&lt;/button&gt;&gt;
-          &lt;span class="cc-skill-level"&gt;&lt;&lt;= $game.player.skills.charisma &gt;&gt;&lt;/span&gt;
+          &lt;span class="cc-skill-level"&gt;&lt;&lt;= window.skillLevel(&quot;charisma&quot;) &gt;&gt;&lt;/span&gt;
           &lt;&lt;button "+"&gt;&gt;&lt;&lt;run window.skillInc("charisma")&gt;&gt;&lt;&lt;goto "CharacterStep4"&gt;&gt;&lt;&lt;/button&gt;&gt;
         &lt;/span&gt;
       &lt;/div&gt;
@@ -1800,7 +3084,7 @@ window.finishCharacterCreation = function() {
         &lt;span class="cc-skill-name"&gt;&lt;&lt;= window.skillName("sport") &gt;&gt;&lt;/span&gt;
         &lt;span class="cc-skill-controls"&gt;
           &lt;&lt;button "−"&gt;&gt;&lt;&lt;run window.skillDec("sport")&gt;&gt;&lt;&lt;goto "CharacterStep4"&gt;&gt;&lt;&lt;/button&gt;&gt;
-          &lt;span class="cc-skill-level"&gt;&lt;&lt;= $game.player.skills.sport &gt;&gt;&lt;/span&gt;
+          &lt;span class="cc-skill-level"&gt;&lt;&lt;= window.skillLevel(&quot;sport&quot;) &gt;&gt;&lt;/span&gt;
           &lt;&lt;button "+"&gt;&gt;&lt;&lt;run window.skillInc("sport")&gt;&gt;&lt;&lt;goto "CharacterStep4"&gt;&gt;&lt;&lt;/button&gt;&gt;
         &lt;/span&gt;
       &lt;/div&gt;
@@ -1808,7 +3092,7 @@ window.finishCharacterCreation = function() {
         &lt;span class="cc-skill-name"&gt;&lt;&lt;= window.skillName("intelligence") &gt;&gt;&lt;/span&gt;
         &lt;span class="cc-skill-controls"&gt;
           &lt;&lt;button "−"&gt;&gt;&lt;&lt;run window.skillDec("intelligence")&gt;&gt;&lt;&lt;goto "CharacterStep4"&gt;&gt;&lt;&lt;/button&gt;&gt;
-          &lt;span class="cc-skill-level"&gt;&lt;&lt;= $game.player.skills.intelligence &gt;&gt;&lt;/span&gt;
+          &lt;span class="cc-skill-level"&gt;&lt;&lt;= window.skillLevel(&quot;intelligence&quot;) &gt;&gt;&lt;/span&gt;
           &lt;&lt;button "+"&gt;&gt;&lt;&lt;run window.skillInc("intelligence")&gt;&gt;&lt;&lt;goto "CharacterStep4"&gt;&gt;&lt;&lt;/button&gt;&gt;
         &lt;/span&gt;
       &lt;/div&gt;
@@ -1816,7 +3100,7 @@ window.finishCharacterCreation = function() {
         &lt;span class="cc-skill-name"&gt;&lt;&lt;= window.skillName("programming") &gt;&gt;&lt;/span&gt;
         &lt;span class="cc-skill-controls"&gt;
           &lt;&lt;button "−"&gt;&gt;&lt;&lt;run window.skillDec("programming")&gt;&gt;&lt;&lt;goto "CharacterStep4"&gt;&gt;&lt;&lt;/button&gt;&gt;
-          &lt;span class="cc-skill-level"&gt;&lt;&lt;= $game.player.skills.programming &gt;&gt;&lt;/span&gt;
+          &lt;span class="cc-skill-level"&gt;&lt;&lt;= window.skillLevel(&quot;programming&quot;) &gt;&gt;&lt;/span&gt;
           &lt;&lt;button "+"&gt;&gt;&lt;&lt;run window.skillInc("programming")&gt;&gt;&lt;&lt;goto "CharacterStep4"&gt;&gt;&lt;&lt;/button&gt;&gt;
         &lt;/span&gt;
       &lt;/div&gt;
@@ -1824,7 +3108,7 @@ window.finishCharacterCreation = function() {
         &lt;span class="cc-skill-name"&gt;&lt;&lt;= window.skillName("art") &gt;&gt;&lt;/span&gt;
         &lt;span class="cc-skill-controls"&gt;
           &lt;&lt;button "−"&gt;&gt;&lt;&lt;run window.skillDec("art")&gt;&gt;&lt;&lt;goto "CharacterStep4"&gt;&gt;&lt;&lt;/button&gt;&gt;
-          &lt;span class="cc-skill-level"&gt;&lt;&lt;= $game.player.skills.art &gt;&gt;&lt;/span&gt;
+          &lt;span class="cc-skill-level"&gt;&lt;&lt;= window.skillLevel(&quot;art&quot;) &gt;&gt;&lt;/span&gt;
           &lt;&lt;button "+"&gt;&gt;&lt;&lt;run window.skillInc("art")&gt;&gt;&lt;&lt;goto "CharacterStep4"&gt;&gt;&lt;&lt;/button&gt;&gt;
         &lt;/span&gt;
       &lt;/div&gt;
@@ -1832,7 +3116,7 @@ window.finishCharacterCreation = function() {
         &lt;span class="cc-skill-name"&gt;&lt;&lt;= window.skillName("dance") &gt;&gt;&lt;/span&gt;
         &lt;span class="cc-skill-controls"&gt;
           &lt;&lt;button "−"&gt;&gt;&lt;&lt;run window.skillDec("dance")&gt;&gt;&lt;&lt;goto "CharacterStep4"&gt;&gt;&lt;&lt;/button&gt;&gt;
-          &lt;span class="cc-skill-level"&gt;&lt;&lt;= $game.player.skills.dance &gt;&gt;&lt;/span&gt;
+          &lt;span class="cc-skill-level"&gt;&lt;&lt;= window.skillLevel(&quot;dance&quot;) &gt;&gt;&lt;/span&gt;
           &lt;&lt;button "+"&gt;&gt;&lt;&lt;run window.skillInc("dance")&gt;&gt;&lt;&lt;goto "CharacterStep4"&gt;&gt;&lt;&lt;/button&gt;&gt;
         &lt;/span&gt;
       &lt;/div&gt;
@@ -1840,7 +3124,7 @@ window.finishCharacterCreation = function() {
         &lt;span class="cc-skill-name"&gt;&lt;&lt;= window.skillName("repair") &gt;&gt;&lt;/span&gt;
         &lt;span class="cc-skill-controls"&gt;
           &lt;&lt;button "−"&gt;&gt;&lt;&lt;run window.skillDec("repair")&gt;&gt;&lt;&lt;goto "CharacterStep4"&gt;&gt;&lt;&lt;/button&gt;&gt;
-          &lt;span class="cc-skill-level"&gt;&lt;&lt;= $game.player.skills.repair &gt;&gt;&lt;/span&gt;
+          &lt;span class="cc-skill-level"&gt;&lt;&lt;= window.skillLevel(&quot;repair&quot;) &gt;&gt;&lt;/span&gt;
           &lt;&lt;button "+"&gt;&gt;&lt;&lt;run window.skillInc("repair")&gt;&gt;&lt;&lt;goto "CharacterStep4"&gt;&gt;&lt;&lt;/button&gt;&gt;
         &lt;/span&gt;
       &lt;/div&gt;
@@ -1848,7 +3132,7 @@ window.finishCharacterCreation = function() {
         &lt;span class="cc-skill-name"&gt;&lt;&lt;= window.skillName("gardening") &gt;&gt;&lt;/span&gt;
         &lt;span class="cc-skill-controls"&gt;
           &lt;&lt;button "−"&gt;&gt;&lt;&lt;run window.skillDec("gardening")&gt;&gt;&lt;&lt;goto "CharacterStep4"&gt;&gt;&lt;&lt;/button&gt;&gt;
-          &lt;span class="cc-skill-level"&gt;&lt;&lt;= $game.player.skills.gardening &gt;&gt;&lt;/span&gt;
+          &lt;span class="cc-skill-level"&gt;&lt;&lt;= window.skillLevel(&quot;gardening&quot;) &gt;&gt;&lt;/span&gt;
           &lt;&lt;button "+"&gt;&gt;&lt;&lt;run window.skillInc("gardening")&gt;&gt;&lt;&lt;goto "CharacterStep4"&gt;&gt;&lt;&lt;/button&gt;&gt;
         &lt;/span&gt;
       &lt;/div&gt;
