@@ -193,6 +193,20 @@ body {
   color: var(--gold);
 }
 
+/* Красная плашка долга (больница/счета) */
+.debt-banner {
+  background: #4a1414;
+  border: 1px solid #b03a3a;
+  color: #ffb3b3;
+  font-size: 13px;
+  font-weight: bold;
+  border-radius: 8px;
+  padding: 6px 10px;
+  margin: 2px 0 8px;
+  text-align: center;
+}
+.debt-banner strong { color: #ff6b6b; }
+
 /* ПОТРЕБНОСТИ — панель в одной рамке */
 #ui-bar .needs-panel {
   width: 100%;
@@ -1285,7 +1299,8 @@ window.SKILLS = [
   { id: "art",           name: "Рисование",     icon: "🎨" },
   { id: "dance",         name: "Танцы",         icon: "💃" },
   { id: "repair",        name: "Ремонт",        icon: "🔧" },
-  { id: "gardening",     name: "Садоводство",   icon: "🌱" }
+  { id: "gardening",     name: "Садоводство",   icon: "🌱" },
+  { id: "writing",       name: "Писательство",  icon: "✍️" }
 ];
 window.skillIcon = function(id) {
   var ic = "⭐";
@@ -1614,6 +1629,9 @@ window.migrateGame = function() {
     shiftsWorked: 0, daysPlayed: 1, artSold: 0, hospitalVisits: 0 };
   if (!g.player.jobStats) g.player.jobStats = {};   // {jobId: {shifts, earned}}
   if (!Array.isArray(g.player.moodlets)) g.player.moodlets = [];  // мудлеты 0.0.4.3
+  if (typeof g.player.debt !== "number") g.player.debt = 0;        // долг больнице/счетам 0.0.4.6
+  if (!g.player.creations) g.player.creations = {};               // созданные произведения 0.0.4.7
+  if (!Array.isArray(g.player.works)) g.player.works = [];
 };
 jQuery(document).on(":passagestart", function(){ try { window.migrateGame(); } catch(e){} });
 // Миграция старых сейвов при загрузке
@@ -1658,7 +1676,7 @@ window.gainSkillXp = function(id, baseXp) {
     if (p.skillCappedToday.indexOf(id) !== -1) return;
     p.skillCappedToday.push(id);
     var skName = window.skillName(id);
-    var mental = ["intelligence","programming","art","charisma","cooking","cleaning","repair"];
+    var mental = ["intelligence","programming","art","charisma","cooking","cleaning","repair","writing"];
     window.toast(mental.indexOf(id) !== -1
       ? "🧠 Голова перегружена: «" + skName + "» сегодня больше не растёт. Отдохните до завтра."
       : "💪 Мышцы забиты: «" + skName + "» сегодня больше не растёт. Отдохните до завтра.", "warn");
@@ -1710,7 +1728,10 @@ window.QUALITY_TEXT = {
   cook:   { 1: "Блюдо почти несъедобно.", 2: "Пересолено и подгорело.", 3: "Обычный домашний обед.", 4: "Очень вкусно, пальчики оближешь.", 5: "Ресторанный деликатес, идеально!" },
   sport:  { 1: "Тренировка прошла кое-как, еле размялся.", 2: "Слабая вялая тренировка.", 3: "Нормально позанимался.", 4: "Отличная продуктивная тренировка!", 5: "Рекордная тренировка — сам в шоке!" },
   program:{ 1: "Код не запускается, сплошные ошибки.", 2: "Работает через раз.", 3: "Программа работает как задумано.", 4: "Чистый, красивый, быстрый код.", 5: "Гениальное решение — работает идеально!" },
-  dance:  { 1: "Слоны на льду, а не танец.", 2: "Двигаетесь не в такт.", 3: "Танцуете уверенно.", 4: "Пластика и ритм — загляденье!", 5: "Танец, от которого все аплодируют!" }
+  dance:  { 1: "Слоны на льду, а не танец.", 2: "Двигаетесь не в такт.", 3: "Танцуете уверенно.", 4: "Пластика и ритм — загляденье!", 5: "Танец, от которого все аплодируют!" },
+  art:    { 1: "Арт вышел откровенно слабым.", 2: "Замысел виден, но исполнение подкачало.", 3: "Добротная работа, на уровне.", 4: "Очень выразительная работа — вам нравится.", 5: "Шедевр! Так и хочется подписать в рамку." },
+  program:{ 1: "Программа падает на каждом шагу.", 2: "Работает, но с ошибками и костылями.", 3: "Программа работает стабильно.", 4: "Чистый быстрый код, всё летает.", 5: "Блестящий проект — хоть сейчас в продакшн!" },
+  book:   { 1: "Текст не идёт, полная графомания.", 2: "Пара абзацев через силу.", 3: "Неплохая глава, складно написано.", 4: "Страницы льются сами — читатель не оторвётся.", 5: "Настоящий литературный шедевр, будущий бестселлер!" }
 };
 
 // Базовая случайная величина качества 0..1 (изолируемо для тестов через Math.random)
@@ -1758,22 +1779,41 @@ window.qualityStars = function(q) {
 window.rollSetback = function(actionId, skillId) {
   var level = (skillId && window.skillLevel) ? window.skillLevel(skillId) : 1;
   var mastery = (Math.max(1, Math.min(window.SKILL_MAX_LEVEL, level)) - 1) / (window.SKILL_MAX_LEVEL - 1);
-  // базовый шанс срыва ~12% у новичка, ~2% у мастера
+
+  // ТЯЖЁЛАЯ травма роллится ПЕРВОЙ и независимо (это отдельный слой): при
+  // срабатывании ведёт к госпитализации и перекрывает обычный срыв.
+  var severeChance = 0.05 - mastery * 0.035;
+  if (window.hasTrait && window.hasTrait("clumsy"))   severeChance += 0.03;
+  if (window.hasTrait && window.hasTrait("enduring")) severeChance -= 0.02;
+  var nNeeds = State.variables.game.player.needs;
+  if (nNeeds.energy < 25) severeChance += 0.03;
+  severeChance = Math.max(0.005, Math.min(0.12, severeChance));
+  var severe = Math.random() < severeChance;
+
+  // Обычный (нетяжёлый) срыв: ~12% у новичка, ~2% у мастера.
   var chance = 0.12 - mastery * 0.10;
   if (window.hasTrait && window.hasTrait("clumsy"))   chance += 0.08;  // неуклюжий
   if (window.hasTrait && window.hasTrait("enduring")) chance -= 0.04;  // выносливый
-  var n = State.variables.game.player.needs;
-  if (n.energy < 25) chance += 0.05;   // усталый чаще срывается
+  if (nNeeds.energy < 25) chance += 0.05;             // усталый чаще срывается
   chance = Math.max(0.01, Math.min(0.4, chance));
-  if (Math.random() >= chance) return null;
+  if (!severe && Math.random() >= chance) return null;
 
   // таблица срывов по занятиям
   var SETBACKS = {
-    sport:  { moodlet: "muscle_pull", text: "🤕 Ай! Потянули мышцу на тренировке. Болит, но не критично.", energy: -12, fun: -8 },
-    cook:   { moodlet: "cut_finger",  text: "🩹 Порезали палец ножом, пока готовили. Пришлось заклеить пластырем.", energy: -4, fun: -4 },
-    program:{ moodlet: "code_bug",    text: "🐛 Просидели над неуловимым багом весь вечер — голова квадратная.", energy: -8, fun: -8 },
-    draw:   { moodlet: "art_mess",    text: "🎨 Смешали все краски в грязно-бурый — холст испорчен, настроение тоже.", fun: -8 },
-    repair: { moodlet: "muscle_pull", text: "🤕 Сорвали спину, таская детали. Придётся беречься.", energy: -12 }
+    sport:  severe
+      ? { moodlet: "shock", serious: true, hospitalReason: "sports",
+          text: "⚡ На тренировке случился серьёзный срыв — закружилась голова, потемнело в глазах. Вас увезли в больницу.", energy: -20, fun: -10 }
+      : { moodlet: "muscle_pull", text: "🤕 Ай! Потянули мышцу на тренировке. Болит, но не критично.", energy: -12, fun: -8 },
+    cook:   severe
+      ? { moodlet: "shock", serious: true, hospitalReason: "kitchen",
+          text: "⚡ Схватились за неисправную проводку у плиты — удар током! Пришлось вызывать скорую.", energy: -20, fun: -10 }
+      : { moodlet: "cut_finger", text: "🩹 Порезали палец ножом, пока готовили. Пришлось заклеить пластырем.", energy: -4, fun: -4 },
+    program:{ moodlet: "code_bug", text: "🐛 Просидели над неуловимым багом весь вечер — голова квадратная.", energy: -8, fun: -8 },
+    draw:   { moodlet: "art_mess", text: "🎨 Смешали все краски в грязно-бурый — холст испорчен, настроение тоже.", fun: -8 },
+    repair: severe
+      ? { moodlet: "shock", serious: true, hospitalReason: "repair",
+          text: "⚡ Дёрнуло током от оголённого провода! Вы потеряли сознание — очнулись уже по дороге в больницу.", energy: -20, fun: -10 }
+      : { moodlet: "muscle_pull", text: "🤕 Сорвали спину, таская детали. Придётся беречься.", energy: -12 }
   };
   return SETBACKS[actionId] || null;
 };
@@ -1795,6 +1835,109 @@ window.applyQuality = function(actionId, skillId) {
   else if (q <= 2) window.addMoodlet("poor_work");
   // качество 3 («нормально») — нейтрально, отдельного мудлета не даём
   return q;
+};
+
+// Завершение СОЗДАНИЯ произведения (арт/программа/игра/книга).
+// В отличие от практики, это «долгая» деятельность с готовым результатом:
+// даём качество, мудлет завершённой работы и (пока) просто копим счётчик.
+window.CREATION_KIND = {
+  make_art:     { key: "art",     skill: "art",         noun: "арт",       item: "artWorks" },
+  make_program: { key: "program", skill: "programming", noun: "программа", item: "programs" },
+  make_game:    { key: "program", skill: "programming", noun: "игра",      item: "games" },
+  write_book:   { key: "book",    skill: "writing",     noun: "книга",     item: "books" }
+};
+window.finishCreation = function(actionId, skillId) {
+  var kind = window.CREATION_KIND[actionId];
+  var q = window.applyQuality(kind.key, skillId || (kind && kind.skill));
+  window.addMoodlet("finished_work");
+  // копим созданные произведения в статистике (позже — продажа/инвентарь)
+  var p = State.variables.game.player;
+  if (!p.creations) p.creations = {};
+  p.creations[kind.item] = (p.creations[kind.item] || 0) + 1;
+  if (!Array.isArray(p.works)) p.works = [];
+  p.works.push({ kind: kind.item, quality: q, day: State.variables.game.time && State.variables.game.time.day });
+  window.toast("📦 " + kind.noun.charAt(0).toUpperCase() + kind.noun.slice(1)
+    + " готова! Качество: " + window.qualityStars(q) + "  (всего создано: " + p.creations[kind.item] + ")", q >= 4 ? "good" : "info");
+  return q;
+};
+
+/* ===========================================================================
+   0.0.4.6 — БОЛЬНИЦА И ТЯЖЁЛЫЕ ТРАВМЫ
+   sendToHospital(reason): проматывает сутки лечения, восстанавливает
+   потребности, снимает острые дебаффы, навешивает мудлет слабости и
+   выставляет счёт $500. Если денег не хватает — уходит в долг (красная
+   плашка в сайдбаре). После лечения возвращает домой.
+   =========================================================================== */
+window.HOSPITAL_COST = 500;
+window.HOSPITAL_DAYS = 1;
+
+// Человекочитаемая причина госпитализации для текста
+window.HOSPITAL_REASONS = {
+  sports:  "перетренировались и получили серьёзную травму на спортзале",
+  kitchen: "получили удар током от неисправной плиты",
+  repair:  "дёрнуло током при ремонте оголённой проводки",
+  manual:  "обратились в больницу за лечением"
+};
+
+// Острые дебаффы, которые больница снимает (травмы, ожоги, срывы).
+window.HOSPITAL_CURES = ["shock","muscle_pull","back_strain","burned_hand","minor_burn","cut_finger"];
+
+window.sendToHospital = function(reason) {
+  window.migrateGame();
+  var g = State.variables.game, p = g.player;
+  reason = reason || "manual";
+  var n = p.needs;
+
+  // 1) сутки лечения (промотка времени в «больничном» режиме — энергия растёт)
+  p.sleeping = true; // чтобы updateNeeds восстанавливал энергию, как во сне/отдыхе
+  advanceTime(window.HOSPITAL_DAYS * 24 * 60, []);
+  p.sleeping = false;
+
+  // 2) восстановление потребностей
+  n.energy  = 90;
+  n.satiety = 80;
+  n.hygiene = 85;
+  n.social  = Math.max(n.social || 0, 55);
+  n.fun     = Math.max(n.fun || 0, 45);
+  n.bladder = 95;
+
+  // 3) снять острые дебаффы-травмы; наложить мудлет слабости после больницы
+  if (Array.isArray(p.moodlets)) {
+    p.moodlets = p.moodlets.filter(function(m){
+      return window.HOSPITAL_CURES.indexOf(m.id) === -1;
+    });
+  }
+  window.addMoodlet("treated");
+
+  // 4) счёт за лечение: деньгами, при нехватке — в долг
+  var cost = window.HOSPITAL_COST;
+  var paid = Math.min(p.money, cost);
+  p.money -= paid;
+  var remaining = cost - paid;
+  if (remaining > 0) {
+    p.debt = (p.debt || 0) + remaining;
+    window.toast("🏥 Вы пробыли в больнице сутки. Счёт $" + cost + ": хватило $" + paid
+      + ", остальное $" + remaining + " ушло в ДОЛГ.", "bad");
+  } else {
+    window.toast("🏥 Вы пробыли в больнице сутки. Оплата лечения: -$" + cost + ".", "info");
+  }
+  if (p.stats) p.stats.hospitalVisits = (p.stats.hospitalVisits || 0) + 1;
+
+  // 5) возврат домой
+  g.location = "home";
+  g.room = "living_room";
+  window.finishAction();
+
+  var why = window.HOSPITAL_REASONS[reason] || window.HOSPITAL_REASONS.manual;
+  window.toast("💊 Вас подлечили: потребности восстановлены, острая травма прошла. "
+    + "Вы " + why + ", но уже идёте на поправку.", "good");
+
+  setTimeout(function(){ Engine.play("Home"); }, 0);
+};
+
+// Добровольно пойти в больницу (через пассаж): стоит денег, снимает травмы.
+window.goHospitalVoluntary = function() {
+  window.sendToHospital("manual");
 };
 
 /* ===========================================================================
@@ -1893,7 +2036,7 @@ window.MOODLET_DEFS = {
   good_talk:   { icon: "💬", label: "Приятная беседа",  emotion: "happy",         weight: 14, mood: 7,  mins: 240 },
   proud:       { icon: "🏆", label: "Гордость",         emotion: "confident",     weight: 24, mood: 12, mins: 480 },
   tipsy_good:  { icon: "💰", label: "Удачная смена",    emotion: "happy",         weight: 20, mood: 10, mins: 360 },
-  back_strain: { icon: "🤕", label: "Болит спина",      emotion: "uncomfortable", weight: 30, mood: -12, mins: 1440 },
+  back_strain: { icon: "🤕", label: "Болит спина",      emotion: "uncomfortable", weight: 30, mood: -12, permanent: true, injury: true },
   // --- события на работе ---
   shift_done:  { icon: "💼", label: "Трудовой день",    emotion: "exhausted",     weight: 12, mood: -4,  mins: 300 },
   caught_thief:{ icon: "🛡️", label: "Задержал вора",    emotion: "confident",     weight: 22, mood: 12, mins: 360 },
@@ -1901,7 +2044,7 @@ window.MOODLET_DEFS = {
   big_tips:    { icon: "🪙", label: "Щедрые чаевые",    emotion: "cheerful",      weight: 22, mood: 12, mins: 360 },
   tray_dropped:{ icon: "🤦", label: "Уронил поднос",    emotion: "embarrassed",   weight: 22, mood: -12, mins: 240 },
   dish_praised:{ icon: "🍽️", label: "Блюдо похвалили", emotion: "confident",     weight: 22, mood: 12, mins: 360 },
-  burned_hand: { icon: "♨️", label: "Обжёгся",          emotion: "uncomfortable", weight: 24, mood: -10, mins: 240 },
+  burned_hand: { icon: "♨️", label: "Обжёгся",          emotion: "uncomfortable", weight: 24, mood: -10, permanent: true, injury: true },
   early_unload:{ icon: "💪", label: "Сделал норму",     emotion: "confident",     weight: 22, mood: 12, mins: 360 },
   // --- досуг/быт ---
   amused:      { icon: "📺", label: "Отдых у телевизора",emotion: "cheerful",     weight: 12, mood: 6,  mins: 180 },
@@ -1911,11 +2054,17 @@ window.MOODLET_DEFS = {
   good_work:   { icon: "👍", label: "Хороший результат",emotion: "happy",        weight: 15, mood: 7,  mins: 300 },
   poor_work:   { icon: "😬", label: "Комом",            emotion: "sad",           weight: 14, mood: -6, mins: 180 },
   // --- срывы / травмы (редкий слой, выше на низком навыке) ---
-  muscle_pull: { icon: "🤕", label: "Потянул мышцу",    emotion: "uncomfortable", weight: 32, mood: -14, mins: 1200 },
-  cut_finger:  { icon: "🩹", label: "Порезал палец",    emotion: "uncomfortable", weight: 22, mood: -8,  mins: 360 },
-  minor_burn:  { icon: "♨️", label: "Обжёгся о плиту",  emotion: "uncomfortable", weight: 24, mood: -10, mins: 300 },
+  muscle_pull: { icon: "🤕", label: "Потянул мышцу",    emotion: "uncomfortable", weight: 32, mood: -14, permanent: true, injury: true },
+  cut_finger:  { icon: "🩹", label: "Порезал палец",    emotion: "uncomfortable", weight: 22, mood: -8,  permanent: true, injury: true },
+  minor_burn:  { icon: "♨️", label: "Обжёгся о плиту",  emotion: "uncomfortable", weight: 24, mood: -10, permanent: true, injury: true },
   code_bug:    { icon: "🐛", label: "Баг в коде",       emotion: "tense",         weight: 18, mood: -8,  mins: 240 },
-  art_mess:    { icon: "🎨", label: "Вышла каляка-маляка",emotion: "embarrassed", weight: 16, mood: -7,  mins: 180 }
+  art_mess:    { icon: "🎨", label: "Вышла каляка-маляка",emotion: "embarrassed", weight: 16, mood: -7,  mins: 180 },
+  // --- тяжёлые травмы (ведут в больницу) и последствия лечения ---
+  shock:       { icon: "⚡", label: "Удар током!",      emotion: "exhausted",     weight: 60, mood: -30, permanent: true, injury: true, serious: true },
+  treated:     { icon: "💊", label: "Слабость после больницы",emotion: "exhausted",weight: 16, mood: -6,  mins: 1440 },
+  // --- садоводство и завершённые произведения ---
+  peaceful:    { icon: "🌿", label: "Умиротворение",       emotion: "neutral",       weight: 16, mood: 10, mins: 300 },
+  finished_work:{ icon: "📦", label: "Работа завершена",   emotion: "confident",     weight: 22, mood: 12, mins: 480 }
 };
 
 window.addMoodlet = function(id, minsOverride) {
@@ -1924,11 +2073,16 @@ window.addMoodlet = function(id, minsOverride) {
   if (!p.moodlets) p.moodlets = [];
   var def = window.MOODLET_DEFS[id];
   if (!def) return;
+  // постоянные мудлеты (травмы) не истекают по таймеру — снимаются лечением
+  var permanent = !!def.permanent;
   // если такой уже есть — продлеваем/освежаем
   var ex = p.moodlets.filter(function(m){ return m.id === id; })[0];
-  var mins = minsOverride || def.mins || 0;
-  if (ex) { ex.minsLeft = Math.max(ex.minsLeft, mins); return; }
-  var m = { id: id, minsLeft: mins };
+  if (ex) {
+    if (!permanent) { var mins = minsOverride || def.mins || 0; ex.minsLeft = Math.max(ex.minsLeft, mins); }
+    return;
+  }
+  var m = { id: id, minsLeft: permanent ? -1 : (minsOverride || def.mins || 0) };
+  if (permanent) m.permanent = true;
   p.moodlets.push(m);
 };
 // Мудлеты от состояний (без таймера: живут, пока выполняется условие) — пересобираются.
@@ -1937,7 +2091,7 @@ window.refreshNeedMoodlets = function() {
   var p = State.variables.game.player, n = p.needs;
   if (!p.moodlets) p.moodlets = [];
   // Удаляем старые «состояния» (пометка state:true), затем добавляем актуальные
-  p.moodlets = p.moodlets.filter(function(m){ return !m.state; });
+  p.moodlets = p.moodlets.filter(function(m){ return !m.state; }); // постоянные травмы (permanent) сохраняются
   function state(id, cond) { if (cond) p.moodlets.push({ id: id, minsLeft: -1, state: true }); }
   state("starving",    n.satiety <= 12);
   state("hungry",      n.satiety > 12 && n.satiety < 30);
@@ -1952,8 +2106,8 @@ window.refreshNeedMoodlets = function() {
 window.tickMoodlets = function(minutes) {
   var p = State.variables.game.player;
   if (!p.moodlets) return;
-  p.moodlets.forEach(function(m){ if (!m.state && m.minsLeft > 0) m.minsLeft -= minutes; });
-  p.moodlets = p.moodlets.filter(function(m){ return m.state || m.minsLeft > 0; });
+  p.moodlets.forEach(function(m){ if (!m.state && !m.permanent && m.minsLeft > 0) m.minsLeft -= minutes; });
+  p.moodlets = p.moodlets.filter(function(m){ return m.state || m.permanent || m.minsLeft > 0; });
 };
 window.getMoodletDef = function(m) {
   return window.MOODLET_DEFS[m.id] || { icon: "•", label: m.id, emotion: "neutral", weight: 0, mood: 0 };
@@ -1992,16 +2146,19 @@ window.renderMoodletPanel = function() {
   var em = window.EMOTIONS[emKey] || window.EMOTIONS.neutral;
   var emName = window.emotionName(emKey);
   // Подсказка для эмоции: состояние + все активные причины
+  function moodTime(m){
+    if (m.state) return "";                       // состояние потребности
+    if (m.permanent || m.minsLeft < 0) return " (нужно лечение)";  // травма
+    return m.minsLeft >= 60 ? " (~" + Math.ceil(m.minsLeft/60) + "ч)" : " (~" + Math.max(1,Math.round(m.minsLeft)) + "м)";
+  }
   var reasons = (p.moodlets || []).map(function(m){
     var def = window.getMoodletDef(m);
-    var time = m.state ? "" : (m.minsLeft >= 60 ? " (~" + Math.ceil(m.minsLeft/60) + "ч)" : " (~" + Math.max(1,Math.round(m.minsLeft)) + "м)");
-    return def.label + time;
+    return def.label + moodTime(m);
   });
   var emTip = emName + (reasons.length ? ":\n• " + reasons.join("\n• ") : "");
   var list = (p.moodlets || []).map(function(m){
     var def = window.getMoodletDef(m);
-    var time = m.state ? "" : (m.minsLeft >= 60 ? " (~" + Math.ceil(m.minsLeft/60) + "ч)" : " (~" + Math.max(1,Math.round(m.minsLeft)) + "м)");
-    return '<span class="moodlet-chip" title="'+def.label+time+'">'+def.icon+'</span>';
+    return '<span class="moodlet-chip" title="'+def.label+moodTime(m)+'">'+def.icon+'</span>';
   }).join("");
   return '<div class="moodlet-panel">'
     + '<div class="emotion-line"><span class="emotion-icon" title="'+emTip.replace(/"/g,'&quot;')+'">'+em.icon+'</span>'
@@ -2115,7 +2272,30 @@ window.ACTIONS = {
                 cost: { energy: 10 }, skill: "programming", xp: 5, label: "Программировать" },
   draw:       { room: "workshop",    time: 60,  ignore: ["fun", "energy"],
                 add: { fun: 20 }, cost: { energy: 3 },
-                skill: "art", xp: 5, label: "Рисовать" }
+                skill: "art", xp: 5, label: "Рисовать" },
+  // --- создание произведений (0.0.4.7): выбор в отдельных пассажах ---
+  make_art:    { room: "workshop",  time: 120, ignore: ["fun", "energy"],
+                add: { fun: 15 }, cost: { energy: 8 },
+                skill: "art", xp: 5, label: "Создать арт" },
+  make_program:{ room: "office",    time: 180, ignore: ["energy"],
+                cost: { energy: 14 },
+                skill: "programming", xp: 5, label: "Написать программу" },
+  make_game:   { room: "office",    time: 240, ignore: ["energy","fun"],
+                add: { fun: 8 }, cost: { energy: 18 },
+                skill: "programming", xp: 5, label: "Сделать игру" },
+  write_book:  { room: "office",    time: 180, ignore: ["energy","fun"],
+                add: { fun: 8 }, cost: { energy: 12 },
+                skill: "writing", xp: 5, label: "Написать книгу" },
+  // --- садоводство: уход за растением (умиротворение) ---
+  water_plant: { room: "terrace",   time: 20,  ignore: ["fun","social"],
+                add: { fun: 10, social: 4 }, cost: { energy: 2 },
+                skill: "gardening", xp: 5, label: "Полить растение" },
+  tend_plant:  { room: "terrace",   time: 40,  ignore: ["fun","social","hygiene"],
+                add: { fun: 16, social: 6, hygiene: -2 }, cost: { energy: 5 },
+                skill: "gardening", xp: 5, label: "Ухаживать за садом" },
+  water_room_plant:{ room: "living_room", time: 20, ignore: ["fun","social"],
+                add: { fun: 10, social: 4 }, cost: { energy: 2 },
+                skill: "gardening", xp: 5, label: "Полить домашнее растение" }
 };
 
 /* ===========================================================================
@@ -2261,6 +2441,7 @@ window.performAction = function(id) {
   if (id === "talk"   && n.social  >= 80) window.addMoodlet("good_talk");
   if (id === "draw"   && n.fun     >= 70) window.addMoodlet("inspired");
   if (id === "watch_tv" && n.fun   >= 60) window.addMoodlet("amused");
+  if ((id === "water_plant" || id === "tend_plant" || id === "water_room_plant") && n.fun >= 55) window.addMoodlet("peaceful");
 
   // 6) опыт навыка
   if (a.skill) { window.gainSkillXp(a.skill, a.xp || window.SKILL_XP_BASE); }
@@ -2268,6 +2449,7 @@ window.performAction = function(id) {
   // 6b) СЛОЙ СРЫВА/ТРАВМЫ (редкий, отдельно от качества): спорт, готовка,
   //     программирование, рисование. Применяем ДО качества, чтобы штрафы
   //     потребностей успели сказаться на состоянии.
+  var seriousInjury = null;
   if (["sport","cook","program","draw","repair"].indexOf(id) !== -1) {
     var sb = window.rollSetback(id, a.skill);
     if (sb) {
@@ -2275,13 +2457,26 @@ window.performAction = function(id) {
       if (sb.fun)    n.fun    = Math.max(0, Math.min(100, n.fun + sb.fun));
       window.toast(sb.text, "bad");
       window.addMoodlet(sb.moodlet);
+      if (sb.serious) seriousInjury = sb;
     }
   }
 
-  // 6c) КАЧЕСТВО результата занятия (всегда, 1..5) для практики навыка.
-  //     Не у разговоров/уборки, а у «созидательных» действий с видимым результатом.
-  if (["draw","cook","sport","program"].indexOf(id) !== -1) {
-    window.applyQuality(id, a.skill);
+  // Тяжёлая травма -> срочная госпитализация (промотает сутки, вылечит, счёт).
+  if (seriousInjury) {
+    window.sendToHospital(seriousInjury.hospitalReason || "manual");
+    return; // sendToHospital сам перерисует Home; качество занятия не показываем
+  }
+
+  // 6c) КАЧЕСТВО результата занятия (всегда, 1..5).
+  //     Практика (draw/cook/sport/program) и создание произведений
+  //     (make_art/make_program/make_game/write_book) дают видимый результат.
+  var qKey = {
+    draw: "draw", cook: "cook", sport: "sport", program: "program",
+    make_art: "art", make_program: "program", make_game: "program", write_book: "book"
+  }[id];
+  if (qKey) {
+    if (id.indexOf("make_") === 0 || id === "write_book") window.finishCreation(id, a.skill);
+    else window.applyQuality(qKey, a.skill);
   }
 
   // 7) финал: критические потребности + настроение
@@ -2512,7 +2707,8 @@ window.finishCharacterCreation = function() {
       art: 1,
       dance: 1,
       repair: 1,
-      gardening: 1
+      gardening: 1,
+      writing: 1
     },
     housing: null,
     skillDaily: {},
@@ -2566,6 +2762,11 @@ window.finishCharacterCreation = function() {
   &lt;div class="money"&gt;
     💵 &lt;&lt;= $game.player.money &gt;&gt;
   &lt;/div&gt;
+  &lt;&lt;if $game.player.debt gt 0&gt;&gt;
+  &lt;div class="debt-banner" title="Долг за лечение. Заработайте и погасите его через больницу или телефон."&gt;
+    🚨 Долг: &lt;strong&gt;$&lt;&lt;= $game.player.debt &gt;&gt;&lt;/strong&gt;
+  &lt;/div&gt;
+  &lt;&lt;/if&gt;&gt;
 
   &lt;&lt;print window.renderNeedsPanel()&gt;&gt;
 
@@ -2604,6 +2805,7 @@ window.finishCharacterCreation = function() {
       &lt;&lt;link "📺 Смотреть телевизор (до +25 досуга, 1 час)"&gt;&gt;&lt;&lt;run performAction(&quot;watch_tv&quot;)&gt;&gt;&lt;&lt;/link&gt;&gt;
       &lt;&lt;link "📱 Поговорить по телефону (до +7 общения, 10 мин)"&gt;&gt;&lt;&lt;run performAction(&quot;call&quot;)&gt;&gt;&lt;&lt;/link&gt;&gt;
       &lt;&lt;link "🗣️ Живое общение (до +25 общения, до +5 досуга, 30 мин)"&gt;&gt;&lt;&lt;run performAction(&quot;talk&quot;)&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "🪴 Полить домашнее растение (умиротворение, +садоводство)"&gt;&gt;&lt;&lt;run performAction(&quot;water_room_plant&quot;)&gt;&gt;&lt;&lt;/link&gt;&gt;
     &lt;&lt;/if&gt;&gt;
     &lt;&lt;if $game.room == "kitchen"&gt;&gt;
       &lt;&lt;link "🍳 Готовить (-5 энергии, 1 час)"&gt;&gt;&lt;&lt;run performAction(&quot;cook&quot;)&gt;&gt;&lt;&lt;/link&gt;&gt;
@@ -2620,10 +2822,10 @@ window.finishCharacterCreation = function() {
       &lt;&lt;link "🏋️ Спорт (до +15 досуга, -15 энергии, -5 сытости, 1 час)"&gt;&gt;&lt;&lt;run performAction(&quot;sport&quot;)&gt;&gt;&lt;&lt;/link&gt;&gt;
     &lt;&lt;/if&gt;&gt;
     &lt;&lt;if $game.room == "office"&gt;&gt;
-      &lt;&lt;link "💻 Программировать (-10 энергии, 2 часа)"&gt;&gt;&lt;&lt;run performAction(&quot;program&quot;)&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "💻 Программировать / писать…"&gt;&gt;&lt;&lt;goto "CodeDesk"&gt;&gt;&lt;&lt;/link&gt;&gt;
     &lt;&lt;/if&gt;&gt;
     &lt;&lt;if $game.room == "workshop"&gt;&gt;
-      &lt;&lt;link "🎨 Рисовать (до +20 досуга, -3 энергии, 1 час)"&gt;&gt;&lt;&lt;run performAction(&quot;draw&quot;)&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "🎨 Заняться творчеством…"&gt;&gt;&lt;&lt;goto "ArtStudio"&gt;&gt;&lt;&lt;/link&gt;&gt;
     &lt;&lt;/if&gt;&gt;
     &lt;&lt;if $game.room == "garage"&gt;&gt;
       &lt;p&gt;Здесь пока пусто. Позже появится транспорт и инструменты.&lt;/p&gt;
@@ -2632,10 +2834,13 @@ window.finishCharacterCreation = function() {
       &lt;p&gt;Вы в прихожей. Отсюда можно будет выйти на улицу. А пока — подработать.&lt;/p&gt;
       &lt;div class="cc-buttons is-vertical"&gt;
         &lt;&lt;link "💼 Пойти на работу…"&gt;&gt;&lt;&lt;goto "Work"&gt;&gt;&lt;&lt;/link&gt;&gt;
+        &lt;&lt;link "🏥 Поехать в больницу…"&gt;&gt;&lt;&lt;goto "Hospital"&gt;&gt;&lt;&lt;/link&gt;&gt;
       &lt;/div&gt;
     &lt;&lt;/if&gt;&gt;
     &lt;&lt;if $game.room == "terrace"&gt;&gt;
-      &lt;p&gt;Терраса. Свежий воздух и растения.&lt;/p&gt;
+      &lt;p&gt;Терраса. Свежий воздух и ваши растения.&lt;/p&gt;
+      &lt;&lt;link "🌱 Полить растение (+досуг, умиротворение, 20 мин)"&gt;&gt;&lt;&lt;run performAction(&quot;water_plant&quot;)&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "🪴 Ухаживать за садом (+досуг, рост садоводства, 40 мин)"&gt;&gt;&lt;&lt;run performAction(&quot;tend_plant&quot;)&gt;&gt;&lt;&lt;/link&gt;&gt;
     &lt;&lt;/if&gt;&gt;
   &lt;/div&gt;
 &lt;/section&gt;
@@ -2672,6 +2877,59 @@ window.finishCharacterCreation = function() {
       &lt;&lt;link "🍽️ Официант (обаяние + чаевые, ~$55)"&gt;&gt;&lt;&lt;run window.workShift("waiter")&gt;&gt;&lt;&lt;/link&gt;&gt;
       &lt;&lt;link "🍳 Повар (кулинария, ~$60)"&gt;&gt;&lt;&lt;run window.workShift("cook")&gt;&gt;&lt;&lt;/link&gt;&gt;
       &lt;&lt;link "📦 Грузчик (сила, ~$70 за смену)"&gt;&gt;&lt;&lt;run window.workShift("loader")&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "🚶 Вернуться домой"&gt;&gt;&lt;&lt;goto "Home"&gt;&gt;&lt;&lt;/link&gt;&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+&lt;&lt;/nobr&gt;&gt;</tw-passagedata><tw-passagedata pid="903" name="Hospital" tags="" position="1100,1050" size="100,100">&lt;&lt;nobr&gt;&gt;
+&lt;div class="character-creation"&gt;
+  &lt;div class="cc-main-title"&gt;🏥 Больница&lt;/div&gt;
+  &lt;h1 class="cc-step-title"&gt;Вас осматривает врач&lt;/h1&gt;
+  &lt;div class="cc-block" style="max-width:560px;margin:0 auto;"&gt;
+    &lt;p class="cc-hint"&gt;За лечение больница берёт &lt;strong&gt;$&lt;&lt;= window.HOSPITAL_COST &gt;&gt;&lt;/strong&gt;. Лечение занимает сутки: вы отдохнёте, придёте в себя, все травмы и ожоги пройдут, а потребности восстановятся.&lt;/p&gt;
+    &lt;p class="cc-hint"&gt;Травмы сами не проходят — пока не вылечитесь, штрафы и боль останутся. Если денег не хватит, недостающая сумма уйдёт в &lt;strong&gt;долг&lt;/strong&gt; — он будет висеть красной плашкой, пока не расплатитесь.&lt;/p&gt;
+    &lt;div class="cc-buttons is-vertical"&gt;
+      &lt;&lt;link "💊 Пройти лечение (-$&lt;&lt;= window.HOSPITAL_COST &gt;&gt;, сутки)"&gt;&gt;&lt;&lt;run window.goHospitalVoluntary()&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "🚶 Уйти домой"&gt;&gt;&lt;&lt;goto "Home"&gt;&gt;&lt;&lt;/link&gt;&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+&lt;&lt;/nobr&gt;&gt;</tw-passagedata><tw-passagedata pid="910" name="ArtStudio" tags="" position="1200,21997800" size="100,100">&lt;&lt;nobr&gt;&gt;
+&lt;div class="character-creation"&gt;
+  &lt;div class="cc-main-title"&gt;🎨 Мастерская: творчество&lt;/div&gt;
+  &lt;h1 class="cc-step-title"&gt;Чем займёмся?&lt;/h1&gt;
+  &lt;div class="cc-block" style="max-width:560px;margin:0 auto;"&gt;
+    &lt;p class="cc-hint"&gt;Здесь вы рисуете для души или создаёте готовый арт. Качество зависит от навыка рисования. Готовые работы позже можно будет продавать.&lt;/p&gt;
+    &lt;div class="cc-buttons is-vertical"&gt;
+    &lt;&lt;link "🖌️ Практиковаться в рисовании (1 час, рост навыка)"&gt;&gt;&lt;&lt;run performAction("draw")&gt;&gt;&lt;&lt;/link&gt;&gt;
+    &lt;&lt;link "🖼️ Создать арт (2 часа, готовое произведение)"&gt;&gt;&lt;&lt;run performAction("make_art")&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "🚶 Вернуться домой"&gt;&gt;&lt;&lt;goto "Home"&gt;&gt;&lt;&lt;/link&gt;&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+&lt;&lt;/nobr&gt;&gt;</tw-passagedata><tw-passagedata pid="911" name="CodeDesk" tags="" position="1200,21997800" size="100,100">&lt;&lt;nobr&gt;&gt;
+&lt;div class="character-creation"&gt;
+  &lt;div class="cc-main-title"&gt;💻 Рабочий стол: разработка&lt;/div&gt;
+  &lt;h1 class="cc-step-title"&gt;Чем займёмся?&lt;/h1&gt;
+  &lt;div class="cc-block" style="max-width:560px;margin:0 auto;"&gt;
+    &lt;p class="cc-hint"&gt;Кабинет для программирования. Практика прокачивает навык, а крупные проекты — программы и игры — станут готовыми произведениями (позже их можно будет продавать).&lt;/p&gt;
+    &lt;div class="cc-buttons is-vertical"&gt;
+    &lt;&lt;link "🧩 Практиковаться в коде (2 часа, рост навыка)"&gt;&gt;&lt;&lt;run performAction("program")&gt;&gt;&lt;&lt;/link&gt;&gt;
+    &lt;&lt;link "⌨️ Написать программу (3 часа, готовый проект)"&gt;&gt;&lt;&lt;run performAction("make_program")&gt;&gt;&lt;&lt;/link&gt;&gt;
+    &lt;&lt;link "🎮 Сделать игру (4 часа, сложный проект)"&gt;&gt;&lt;&lt;run performAction("make_game")&gt;&gt;&lt;&lt;/link&gt;&gt;
+    &lt;&lt;link "✍️ Написать книгу (3 часа, навык писательства)"&gt;&gt;&lt;&lt;run performAction("write_book")&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "🚶 Вернуться домой"&gt;&gt;&lt;&lt;goto "Home"&gt;&gt;&lt;&lt;/link&gt;&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+&lt;&lt;/nobr&gt;&gt;</tw-passagedata><tw-passagedata pid="912" name="WritingDesk" tags="" position="1200,21997800" size="100,100">&lt;&lt;nobr&gt;&gt;
+&lt;div class="character-creation"&gt;
+  &lt;div class="cc-main-title"&gt;✍️ Письменный стол&lt;/div&gt;
+  &lt;h1 class="cc-step-title"&gt;Чем займёмся?&lt;/h1&gt;
+  &lt;div class="cc-block" style="max-width:560px;margin:0 auto;"&gt;
+    &lt;p class="cc-hint"&gt;Тихое место для текстов. Пишите книги: качество зависит от навыка писательства, завершённые работы позже можно будет издавать.&lt;/p&gt;
+    &lt;div class="cc-buttons is-vertical"&gt;
+    &lt;&lt;link "📝 Написать книгу (3 часа, готовое произведение)"&gt;&gt;&lt;&lt;run performAction("write_book")&gt;&gt;&lt;&lt;/link&gt;&gt;
       &lt;&lt;link "🚶 Вернуться домой"&gt;&gt;&lt;&lt;goto "Home"&gt;&gt;&lt;&lt;/link&gt;&gt;
     &lt;/div&gt;
   &lt;/div&gt;
