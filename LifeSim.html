@@ -1447,15 +1447,15 @@ jQuery(function(){ window.initCCControls(); });
    =========================================================================== */
 
 // --- Константы прокачки ---
-window.SKILL_XP_BASE   = 8;     // базовый опыт за занятие
-window.SKILL_DAILY_CAP = 30;    // суточный лимит опыта на один навык (≈3–4 занятия)
-window.SKILL_MAX_LEVEL = 10;    // максимум уровня в игре (на создании ограничено 3)
+window.SKILL_XP_BASE       = 5;    // опыт за одно занятие
+window.SKILL_DAILY_ACTIONS = 5;    // максимум занятий одного навыка в день (усталость)
+window.SKILL_MAX_LEVEL     = 10;   // максимум уровня в игре (на создании ограничено 3)
 window.hasTrait = function(id) {
   var p = State.variables.game && State.variables.game.player;
   return !!(p && Array.isArray(p.traits) && p.traits.indexOf(id) !== -1);
 };
 // Сколько опыта нужно для перехода с уровня L на L+1 (медленная кривая)
-window.skillXpNeed = function(level) { return 30 + (level - 1) * 30; };
+window.skillXpNeed = function(level) { return 50 + (level - 1) * 50; };
 
 // Нормализует запись навыка к {level, xp}. Мигрирует старые числовые значения.
 window.getSkill = function(id) {
@@ -1487,7 +1487,14 @@ window.migrateGame = function() {
       }
     });
   }
-  if (!g.player.skillDaily) g.player.skillDaily = {};   // {skillId: xpToday}
+  if (!g.player.skillDaily || typeof g.player.skillDaily !== "object") g.player.skillDaily = {};
+  // skillDaily теперь = число ЗАНЯТИЙ сегодня (0..SKILL_DAILY_ACTIONS).
+  // В старых сейвах там были очки опыта (> лимита занятий) — обнулим как невалидное.
+  Object.keys(g.player.skillDaily).forEach(function(k){
+    if (typeof g.player.skillDaily[k] !== "number" || g.player.skillDaily[k] > (window.SKILL_DAILY_ACTIONS||5)) {
+      g.player.skillDaily[k] = 0;
+    }
+  });
   if (!g.player.skillCappedToday) g.player.skillCappedToday = [];
   if (g.time && typeof g.time.clock !== "number") g.time.clock = 0;
   if (!g.player.stats) g.player.stats = { moneyEarned: 0, moneySpent: 0,
@@ -1521,30 +1528,41 @@ try {
 } catch(e) {}
 jQuery(document).on(":load", function(){ try { window.migrateGame(); } catch(e){} });
 
-// Начисление опыта навыку с учётом суточного лимита и черты «быстрообучаемый».
-// Суточный лимит = усталость (ограничивает обычную практику); бонус черты
-// начисляется СВЕРХ лимита (талант учится эффективнее).
+// Начисление опыта навыку за одно занятие.
+// Суточный лимит = число занятий навыка в день (SKILL_DAILY_ACTIONS): дальше
+// навык не растёт до завтра («голова перегружена» / «мышцы забиты»).
+// Черта «быстрообучаемый» даёт больше опыта за каждое из доступных занятий.
 // Возвращает {gained, leveledUp, level, capped}.
 window.gainSkillXp = function(id, baseXp) {
   window.migrateGame();
   var p = State.variables.game.player;
   var sk = window.getSkill(id);
   var before = sk.level;
-  if (!p.skillDaily[id]) p.skillDaily[id] = 0;
+  if (!p.skillDaily[id]) p.skillDaily[id] = 0;  // тут теперь число ЗАНЯТИЙ за сегодня
 
+  function tiredToast() {
+    if (p.skillCappedToday.indexOf(id) !== -1) return;
+    p.skillCappedToday.push(id);
+    var skName = window.skillName(id);
+    var mental = ["intelligence","programming","art","charisma","cooking","cleaning","repair"];
+    window.toast(mental.indexOf(id) !== -1
+      ? "🧠 Голова перегружена: «" + skName + "» сегодня больше не растёт. Отдохните до завтра."
+      : "💪 Мышцы забиты: «" + skName + "» сегодня больше не растёт. Отдохните до завтра.", "warn");
+  }
+
+  // Лимит занятий на сегодня выбран — опыт не начисляем
+  if (p.skillDaily[id] >= window.SKILL_DAILY_ACTIONS) {
+    tiredToast();
+    return { gained: 0, leveledUp: false, level: sk.level, capped: true };
+  }
   // Максимум уровня — опыт не капает
   if (sk.level >= window.SKILL_MAX_LEVEL) {
     return { gained: 0, leveledUp: false, level: sk.level, capped: false };
   }
 
   var base = baseXp || window.SKILL_XP_BASE;
-  var capLeft = Math.max(0, window.SKILL_DAILY_CAP - p.skillDaily[id]);
-  // обычная практика ограничена суточной усталостью
-  var normal = Math.min(base, capLeft);
-  // бонус таланта (сверх лимита)
-  var bonus = window.hasTrait("fastlearner") ? Math.round(base * 0.5) : 0;
-  var gained = normal + bonus;
-  p.skillDaily[id] += normal; // к «усталости» идёт только практика
+  var gained = window.hasTrait("fastlearner") ? Math.round(base * 1.5) : base;
+  p.skillDaily[id] += 1; // засчитали занятие
   sk.xp += gained;
 
   var leveled = false;
@@ -1555,20 +1573,13 @@ window.gainSkillXp = function(id, baseXp) {
   }
   if (sk.level >= window.SKILL_MAX_LEVEL) sk.xp = 0;
 
-  // Усталость: обычной практики сегодня больше не даётся
-  var tired = capLeft <= 0;
-  if (tired && p.skillCappedToday.indexOf(id) === -1) {
-    p.skillCappedToday.push(id);
-    var skName = window.skillName(id);
-    var mental = ["intelligence","programming","art","charisma","cooking","cleaning","repair"];
-    window.toast(mental.indexOf(id) !== -1
-      ? "🧠 Голова перегружена: «" + skName + "» сегодня больше не растёт. Отдохните до завтра."
-      : "💪 Мышцы забиты: «" + skName + "» сегодня больше не растёт. Отдохните до завтра.", "warn");
-  }
   if (leveled) {
     window.toast("📈 " + window.skillName(id) + " — новый уровень " + sk.level + "!", "good");
   }
-  return { gained: gained, leveledUp: sk.level > before, level: sk.level, capped: tired };
+  // Если это занятие было последним доступным — подсказать про усталость
+  if (p.skillDaily[id] >= window.SKILL_DAILY_ACTIONS) tiredToast();
+  return { gained: gained, leveledUp: sk.level > before, level: sk.level,
+           capped: p.skillDaily[id] >= window.SKILL_DAILY_ACTIONS };
 };
 
 // --- Тосты (угол экрана) ---
@@ -1599,9 +1610,9 @@ window.ACTIONS = {
   call:       { room: "living_room", time: 10,  ignore: ["social"],
                 add: { social: 7 }, skill: "charisma", xp: 5, label: "Поговорить по телефону" },
   talk:       { room: "living_room", time: 30,  ignore: ["social", "fun"],
-                add: { social: 25, fun: 5 }, skill: "charisma", xp: 7, label: "Живое общение" },
+                add: { social: 25, fun: 5 }, skill: "charisma", xp: 5, label: "Живое общение" },
   cook:       { room: "kitchen",     time: 60,  ignore: ["energy"],
-                cost: { energy: 5 }, skill: "cooking", xp: 8, label: "Готовить" },
+                cost: { energy: 5 }, skill: "cooking", xp: 5, label: "Готовить" },
   eat:        { room: "kitchen",     time: 30,  ignore: ["satiety"],
                 add: { satiety: 50 }, skill: null, label: "Поесть" },
   shower:     { room: "bathroom",    time: 10,  ignore: ["hygiene"],
@@ -1610,12 +1621,12 @@ window.ACTIONS = {
                 add: { bladder: 100 }, skill: null, label: "Сходить в туалет" },
   sport:      { room: "gym",         time: 60,  ignore: ["fun", "energy", "satiety"],
                 add: { fun: 15 }, cost: { energy: 15, satiety: 5 },
-                skill: "sport", xp: 9, label: "Спорт" },
+                skill: "sport", xp: 5, label: "Спорт" },
   program:    { room: "office",      time: 120, ignore: ["energy"],
-                cost: { energy: 10 }, skill: "programming", xp: 10, label: "Программировать" },
+                cost: { energy: 10 }, skill: "programming", xp: 5, label: "Программировать" },
   draw:       { room: "workshop",    time: 60,  ignore: ["fun", "energy"],
                 add: { fun: 20 }, cost: { energy: 3 },
-                skill: "art", xp: 9, label: "Рисовать" },
+                skill: "art", xp: 5, label: "Рисовать" },
   sleep:      { room: "bedroom",     time: 480, ignore: [],
                 special: "sleep", skill: null, label: "Спать" }
 };
@@ -1669,16 +1680,16 @@ window.openCharacter = function(tab) {
       var lvl = sk.level, max = window.SKILL_MAX_LEVEL;
       var need = (lvl >= max) ? null : window.skillXpNeed(lvl);
       var pct  = (lvl >= max) ? 100 : Math.max(0, Math.min(100, Math.round(sk.xp / need * 100)));
-      var dailyUsed = p.skillDaily[k.id] || 0;
-      var tired = dailyUsed >= window.SKILL_DAILY_CAP;
+      var dailyUsed = p.skillDaily[k.id] || 0;   // число занятий сегодня
+      var tired = dailyUsed >= window.SKILL_DAILY_ACTIONS;
       var bar =
         '<div style="background:#1a2030;border-radius:6px;overflow:hidden;height:8px;margin-top:4px;">' +
           '<div style="height:100;width:'+pct+'%;background:'+(tired?'#e0a63d':'#4d7cfe')+';"></div>' +
         '</div>';
       var sub = (lvl >= max)
         ? 'Максимальный уровень'
-        : ('Опыт '+sk.xp+' / '+need + ' · сегодня практики '+dailyUsed+'/'+window.SKILL_DAILY_CAP
-           + (tired ? ' (отдых)' : ''));
+        : ('Опыт '+sk.xp+' / '+need + ' · практика сегодня '+dailyUsed+'/'+window.SKILL_DAILY_ACTIONS
+           + (tired ? ' (на сегодня хватит — отдых)' : ''));
       return '<div style="display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.07);">'
         + '<div style="flex:1;">'
           + '<div style="font-weight:600;">'+k.name+'</div>'
@@ -1689,7 +1700,7 @@ window.openCharacter = function(tab) {
       + '</div>';
     }).join("");
     return '<h3 style="margin-top:0;">📊 Навыки</h3>'
-      + '<p style="font-size:0.85em;color:#9aa4c0;margin-top:0;">Навыки растут от занятий. В день практика навыка ограничена (~3–4 усердных занятия) — потом нужен отдых до завтра.</p>'
+      + '<p style="font-size:0.85em;color:#9aa4c0;margin-top:0;">Навыки растут от занятий (по +5 опыта за раз). В день доступно до '+window.SKILL_DAILY_ACTIONS+' занятий одного навыка — потом нужен отдых до завтра.</p>'
       + rows;
   }
 
