@@ -1643,13 +1643,14 @@ window.gainSkillXp = function(id, baseXp) {
    0.0.4.2 — РАБОТА (подработка дома: грузчик/официант/продавец/повар)
    =========================================================================== */
 // Базовый навык: «сила» в отдельный навык не вынесена — грузчик опирается на спорт.
+// Порядок — от низкой зарплаты к высокой.
 window.JOBS = [
-  { id: "loader", icon: "📦", name: "Грузчик",
-    desc: "Переносить тяжести на складе. Устаёшь физически, зависит от спорта.",
-    skill: "sport", xp: 2, basePay: 70, energy: 22, satiety: 10,
+  { id: "seller", icon: "🏷️", name: "Продавец",
+    desc: "Стоять за кассой в магазине. Зависит от обаяния.",
+    skill: "charisma", xp: 2, basePay: 50, energy: 10, fun: -8,
     events: [
-      { type: "good", chance: 0.18, text: "💪 Вы помогли разгрузить фуру раньше срока — премия +$30!", pay: 30 },
-      { type: "bad",  chance: 0.14, text: "🤕 Потянули спину: зарплату не урезали, но очень болит. (-10 энергии)", energy: -10 }
+      { type: "good", chance: 0.12, text: "🥷 Вы заметили вора и задержали его — премия +$20!", pay: 20 },
+      { type: "bad",  chance: 0.15, text: "🛒 Вор утащил товар — из зарплаты вычли -$25.", pay: -25 }
     ] },
   { id: "waiter", icon: "🍽️", name: "Официант",
     desc: "Обслуживать посетителей кафе. Чаевые зависят от обаяния.",
@@ -1658,19 +1659,19 @@ window.JOBS = [
       { type: "good", chance: 0.25, text: "👍 Довольный клиент оставил щедрые чаевые +$25!", pay: 25 },
       { type: "bad",  chance: 0.15, text: "🤦 Вы уронили поднос — чаевых нет, настроение упало. (-10 досуга)", fun: -10 }
     ] },
-  { id: "seller", icon: "🏷️", name: "Продавец",
-    desc: "Стоять за кассой в магазине. Внимательность и обаяние.",
-    skill: "charisma", xp: 2, basePay: 50, energy: 10, fun: -8,
-    events: [
-      { type: "good", chance: 0.12, text: "🥷 Вы заметили вора и задержали его — премия +$20!", pay: 20 },
-      { type: "bad",  chance: 0.15, text: "🛒 Вор утащил товар — из зарплаты вычли -$25.", pay: -25 }
-    ] },
   { id: "cook",   icon: "🍳", name: "Повар",
     desc: "Готовить на кухне кафе. Зависит от кулинарии, со временем растёт.",
     skill: "cooking", xp: 2, basePay: 60, energy: 14, satiety: 6,
     events: [
       { type: "good", chance: 0.18, text: "🍲 Ваше блюдо похвалили — небольшая премия +$20!", pay: 20 },
       { type: "bad",  chance: 0.12, text: "♨️ Обожглись у плиты — смена вышла тяжелее. (-8 энергии)", energy: -8 }
+    ] },
+  { id: "loader", icon: "📦", name: "Грузчик",
+    desc: "Переносить тяжести на складе. Устаёшь физически, зависит от спорта.",
+    skill: "sport", xp: 2, basePay: 70, energy: 22, satiety: 10,
+    events: [
+      { type: "good", chance: 0.18, text: "💪 Вы помогли разгрузить фуру раньше срока — премия +$30!", pay: 30 },
+      { type: "bad",  chance: 0.14, text: "🤕 Потянули спину: зарплату не урезали, но очень болит. (-10 энергии)", energy: -10 }
     ] }
 ];
 // Работа прокачивает навык МЕДЛЕННО (1–2 опыта) и не считается обычной
@@ -2301,11 +2302,11 @@ window.finishCharacterCreation = function() {
   &lt;div class="cc-block" style="max-width:560px;margin:0 auto;"&gt;
     &lt;p class="cc-hint"&gt;Смена длится 8 часов, устаёте и тратите сытость. Навык растёт медленно, бывают удачные смены и не очень.&lt;/p&gt;
     &lt;div class="cc-buttons is-vertical"&gt;
-      &lt;&lt;link "📦 Грузчик (сила, ~$70 за смену)"&gt;&gt;&lt;&lt;run window.workShift("loader")&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "🏷️ Продавец (обаяние, ~$50 за смену)"&gt;&gt;&lt;&lt;run window.workShift("seller")&gt;&gt;&lt;&lt;/link&gt;&gt;
       &lt;&lt;link "🍽️ Официант (обаяние + чаевые, ~$55)"&gt;&gt;&lt;&lt;run window.workShift("waiter")&gt;&gt;&lt;&lt;/link&gt;&gt;
-      &lt;&lt;link "🏷️ Продавец (обаяние/внимательность, ~$50)"&gt;&gt;&lt;&lt;run window.workShift("seller")&gt;&gt;&lt;&lt;/link&gt;&gt;
       &lt;&lt;link "🍳 Повар (кулинария, ~$60)"&gt;&gt;&lt;&lt;run window.workShift("cook")&gt;&gt;&lt;&lt;/link&gt;&gt;
-      &lt;&lt;link "🚶 Вернуться домой"&gt;&gt;&lt;&lt;back&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "📦 Грузчик (сила, ~$70 за смену)"&gt;&gt;&lt;&lt;run window.workShift("loader")&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "🚶 Вернуться домой"&gt;&gt;&lt;&lt;goto "Home"&gt;&gt;&lt;&lt;/link&gt;&gt;
     &lt;/div&gt;
   &lt;/div&gt;
 &lt;/div&gt;
@@ -2328,7 +2329,7 @@ window.finishCharacterCreation = function() {
       &lt;&lt;link "2 часа"&gt;&gt;&lt;&lt;run window.sleepHours(2)&gt;&gt;&lt;&lt;/link&gt;&gt;
       &lt;&lt;link "1 час"&gt;&gt;&lt;&lt;run window.sleepHours(1)&gt;&gt;&lt;&lt;/link&gt;&gt;
       &lt;&lt;link "Полчаса (вздремнуть)"&gt;&gt;&lt;&lt;run window.sleepHours(0.5)&gt;&gt;&lt;&lt;/link&gt;&gt;
-      &lt;&lt;link "🚶 Встать с кровати (не спать)"&gt;&gt;&lt;&lt;back&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "🚶 Встать с кровати (не спать)"&gt;&gt;&lt;&lt;goto "Home"&gt;&gt;&lt;&lt;/link&gt;&gt;
     &lt;/div&gt;
   &lt;/div&gt;
 &lt;/div&gt;
