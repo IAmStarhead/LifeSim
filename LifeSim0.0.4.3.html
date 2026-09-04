@@ -159,7 +159,14 @@ body {
   );
   border-right: 1px solid var(--border);
   box-shadow: 8px 0 30px rgba(0, 0, 0, 0.25);
-  width: 280px;
+  width: 320px;
+}
+
+#story {
+  margin-left: 22.5em;
+}
+@media screen and (max-width: 1136px) {
+  #ui-bar.stowed { width: 320px; }
 }
 
 #ui-bar .sidebar-content {
@@ -1727,43 +1734,49 @@ window.getJob = function(id) {
    Текущая эмоция = эмоция самого сильного активного мудлета, иначе из настроения.
    =========================================================================== */
 window.EMOTIONS = {
-  neutral:   { icon: "😐", name: "Нейтрано" },
-  happy:     { icon: "🙂", name: "Радостно" },
-  cheerful:  { icon: "😄", name: "Весело" },
-  playful:   { icon: "🤸", name: "Игриво" },
-  inspired:  { icon: "💡", name: "Вдохновлённо" },
-  focused:   { icon: "🎯", name: "Сосредоточенно" },
-  confident: { icon: "😎", name: "Уверенно" },
-  flirty:    { icon: "😏", name: "Кокетливо" },
-  sad:       { icon: "😢", name: "Грустно" },
-  angry:     { icon: "😠", name: "Зло" },
-  tense:     { icon: "😰", name: "Напряжённо" },
-  embarrassed:{ icon: "😳", name: "Смущённо" },
-  uncomfortable:{ icon: "🤕", name: "Дискомфорт" },
-  exhausted: { icon: "😵", name: "Измотано" },
-  drunk:     { icon: "🍺", name: "Пьяно" }
+  neutral:   { icon: "😐", m: "Спокоен",       f: "Спокойна" },
+  happy:     { icon: "🙂", m: "Доволен",       f: "Довольна" },
+  cheerful:  { icon: "😄", m: "Весел",         f: "Весела" },
+  playful:   { icon: "🤸", m: "Игрив",         f: "Игрива" },
+  inspired:  { icon: "💡", m: "Вдохновлён",    f: "Вдохновлена" },
+  focused:   { icon: "🎯", m: "Сосредоточен",  f: "Сосредоточена" },
+  confident: { icon: "😎", m: "Уверен",        f: "Уверена" },
+  flirty:    { icon: "😏", m: "Кокетлив",      f: "Кокетлива" },
+  sad:       { icon: "😢", m: "Расстроен",     f: "Расстроена" },
+  angry:     { icon: "😠", m: "Зол",           f: "Зла" },
+  tense:     { icon: "😰", m: "Напряжён",      f: "Напряжена" },
+  embarrassed:{ icon: "😳", m: "Смущён",       f: "Смущена" },
+  uncomfortable:{ icon: "😣", m: "Раздражён",  f: "Раздражена" },
+  exhausted: { icon: "😵", m: "Измотан",       f: "Измотана" },
+  drunk:     { icon: "🍺", m: "Пьян",          f: "Пьяна" }
 };
-// Каталог мудлетов
+// Название эмоции с учётом пола персонажа (короткое прилагательное-состояние)
+window.emotionName = function(key) {
+  var e = window.EMOTIONS[key] || window.EMOTIONS.neutral;
+  var g = (State.variables.game && State.variables.game.player) ? State.variables.game.player.gender : "муж";
+  return (g === "жен") ? e.f : e.m;
+};
+// Каталог мудлетов (label — бесполое состояние, чтобы не зависеть от пола)
 window.MOODLET_DEFS = {
   // --- негативные от потребностей ---
-  hungry:      { icon: "🍽️", label: "Голоден",        emotion: "uncomfortable", weight: 25, mood: -12 },
-  starving:    { icon: "🥺", label: "Сильный голод",  emotion: "uncomfortable", weight: 45, mood: -22 },
-  sleepy:      { icon: "😴", label: "Хочется спать",  emotion: "tense",         weight: 22, mood: -10 },
-  exhausted:   { icon: "🥱", label: "Валится с ног",  emotion: "exhausted",     weight: 45, mood: -22 },
-  dirty:       { icon: "💩", label: "Грязный",        emotion: "uncomfortable", weight: 16, mood: -7 },
-  lonely:      { icon: "🫥", label: "Одиноко",        emotion: "sad",           weight: 18, mood: -9 },
-  bored:       { icon: "🥱", label: "Скучно",         emotion: "tense",         weight: 14, mood: -6 },
-  bladder:     { icon: "🚻", label: "Нужно в туалет", emotion: "uncomfortable", weight: 24, mood: -12 },
+  hungry:      { icon: "🍽️", label: "Голод",           emotion: "uncomfortable", weight: 25, mood: -12 },
+  starving:    { icon: "🥺", label: "Сильный голод",   emotion: "uncomfortable", weight: 45, mood: -22 },
+  sleepy:      { icon: "😴", label: "Хочется спать",    emotion: "tense",         weight: 22, mood: -10 },
+  exhausted:   { icon: "🥱", label: "Усталость",        emotion: "exhausted",     weight: 45, mood: -22 },
+  dirty:       { icon: "🧼", label: "Грязно",           emotion: "uncomfortable", weight: 16, mood: -7 },
+  lonely:      { icon: "😔", label: "Одиночество",      emotion: "sad",           weight: 18, mood: -9 },
+  bored:       { icon: "📺", label: "Скука",            emotion: "tense",         weight: 14, mood: -6 },
+  bladder:     { icon: "🚻", label: "Нужно в туалет",   emotion: "uncomfortable", weight: 24, mood: -12 },
   // --- позитивные ---
-  well_fed:    { icon: "🍲", label: "Сытно поел",     emotion: "happy",         weight: 18, mood: 8,  mins: 300 },
-  rested:      { icon: "🛏️", label: "Выспался",       emotion: "happy",         weight: 22, mood: 10, mins: 480 },
-  clean:       { icon: "🚿", label: "Свеж и чист",    emotion: "happy",         weight: 14, mood: 6,  mins: 300 },
-  energetic:   { icon: "⚡", label: "Бодрость",       emotion: "confident",     weight: 16, mood: 8,  mins: 360 },
-  inspired:    { icon: "💡", label: "Вдохновение",    emotion: "inspired",      weight: 20, mood: 8,  mins: 240 },
-  good_talk:   { icon: "💬", label: "Приятная беседа",emotion: "happy",         weight: 14, mood: 7,  mins: 240 },
-  proud:       { icon: "🏆", label: "Гордость",       emotion: "confident",     weight: 24, mood: 12, mins: 480 },
-  tipsy_good:  { icon: "💰", label: "Удачная смена",  emotion: "happy",         weight: 20, mood: 10, mins: 360 },
-  back_strain: { icon: "🤕", label: "Болит спина",    emotion: "uncomfortable", weight: 30, mood: -12, mins: 1440 }
+  well_fed:    { icon: "🍲", label: "Сытость",          emotion: "happy",         weight: 18, mood: 8,  mins: 300 },
+  rested:      { icon: "🛏️", label: "Крепкий сон",      emotion: "happy",         weight: 22, mood: 10, mins: 480 },
+  clean:       { icon: "🚿", label: "Свежесть",         emotion: "happy",         weight: 14, mood: 6,  mins: 300 },
+  energetic:   { icon: "⚡", label: "Бодрость",        emotion: "confident",     weight: 16, mood: 8,  mins: 360 },
+  inspired:    { icon: "💡", label: "Вдохновение",      emotion: "inspired",      weight: 20, mood: 8,  mins: 240 },
+  good_talk:   { icon: "💬", label: "Приятная беседа",  emotion: "happy",         weight: 14, mood: 7,  mins: 240 },
+  proud:       { icon: "🏆", label: "Гордость",         emotion: "confident",     weight: 24, mood: 12, mins: 480 },
+  tipsy_good:  { icon: "💰", label: "Удачная смена",    emotion: "happy",         weight: 20, mood: 10, mins: 360 },
+  back_strain: { icon: "🤕", label: "Болит спина",      emotion: "uncomfortable", weight: 30, mood: -12, mins: 1440 }
 };
 
 window.addMoodlet = function(id, minsOverride) {
@@ -1836,15 +1849,24 @@ window.renderMoodletPanel = function() {
   window.migrateGame();
   window.refreshNeedMoodlets();
   var p = State.variables.game.player;
-  var em = window.EMOTIONS[window.currentEmotion()] || window.EMOTIONS.neutral;
+  var emKey = window.currentEmotion();
+  var em = window.EMOTIONS[emKey] || window.EMOTIONS.neutral;
+  var emName = window.emotionName(emKey);
+  // Подсказка для эмоции: состояние + все активные причины
+  var reasons = (p.moodlets || []).map(function(m){
+    var def = window.getMoodletDef(m);
+    var time = m.state ? "" : (m.minsLeft >= 60 ? " (~" + Math.ceil(m.minsLeft/60) + "ч)" : " (~" + Math.max(1,Math.round(m.minsLeft)) + "м)");
+    return def.label + time;
+  });
+  var emTip = emName + (reasons.length ? ":\n• " + reasons.join("\n• ") : "");
   var list = (p.moodlets || []).map(function(m){
     var def = window.getMoodletDef(m);
-    var time = m.state ? "" : (m.minsLeft >= 60 ? " (" + Math.ceil(m.minsLeft/60) + "ч)" : " (" + Math.max(1,Math.round(m.minsLeft)) + "м)");
+    var time = m.state ? "" : (m.minsLeft >= 60 ? " (~" + Math.ceil(m.minsLeft/60) + "ч)" : " (~" + Math.max(1,Math.round(m.minsLeft)) + "м)");
     return '<span class="moodlet-chip" title="'+def.label+time+'">'+def.icon+'</span>';
   }).join("");
   return '<div class="moodlet-panel">'
-    + '<div class="emotion-line"><span class="emotion-icon">'+em.icon+'</span>'
-    + '<span class="emotion-name">'+em.name+'</span></div>'
+    + '<div class="emotion-line"><span class="emotion-icon" title="'+emTip.replace(/"/g,'&quot;')+'">'+em.icon+'</span>'
+    + '<span class="emotion-name">'+emName+'</span></div>'
     + (list ? '<div class="moodlet-row">'+list+'</div>' : '')
     + '</div>';
 };
