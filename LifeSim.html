@@ -358,12 +358,21 @@ body {
   margin-right: 8px;
 }
 
-/* Кнопки экрана сна — во всю ширину колонкой */
-.character-creation .cc-buttons a.link-internal,
-.character-creation .cc-buttons .link-internal {
+/* Кнопки экрана сна — во всю ширину колонкой, не вылезая за карточку */
+.character-creation .cc-buttons.is-vertical {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+.character-creation .cc-buttons.is-vertical a.link-internal,
+.character-creation .cc-buttons.is-vertical .link-internal {
+  box-sizing: border-box;
   display: block;
   width: 100%;
+  margin: 0;
   text-align: center;
+  padding: 11px 16px;
+  white-space: normal;
 }
 
 #ui-bar .menu-buttons button,
@@ -1827,8 +1836,8 @@ window.openCharacter = function(tab) {
       var dailyUsed = p.skillDaily[k.id] || 0;   // число занятий сегодня
       var tired = dailyUsed >= window.SKILL_DAILY_ACTIONS;
       var bar =
-        '<div style="background:#1a2030;border-radius:6px;overflow:hidden;height:9px;margin-top:4px;">' +
-          '<div style="height:100;width:'+pct+'%;background:'+(tired?'#e0a63d':'#3fb96b')+';transition:width .3s;"></div>' +
+        '<div style="background:#1a2030;border-radius:6px;overflow:hidden;height:10px;margin-top:4px;box-sizing:border-box;">' +
+          '<div style="height:100%;width:'+pct+'%;background:'+(tired?'#e0a63d':'#3fb96b')+';transition:width .3s;box-sizing:border-box;"></div>' +
         '</div>';
       var sub = (lvl >= max)
         ? 'Максимальный уровень'
@@ -2155,7 +2164,7 @@ window.finishCharacterCreation = function() {
   &lt;div class="cc-block" style="max-width:560px;margin:0 auto;"&gt;
     &lt;p class="cc-hint"&gt;Сон восстанавливает энергию, но тратит время. Пока вы спите, понемногу снижаются сытость и другие потребности.&lt;/p&gt;&lt;p class="location-time"&gt;Сейчас &lt;&lt;= window.formatTime() &gt;&gt;.&lt;/p&gt;
 
-    &lt;div class="cc-buttons" style="flex-direction:column;gap:8px;"&gt;
+    &lt;div class="cc-buttons is-vertical"&gt;
       &lt;&lt;link "😴 Спать до полного восстановления энергии"&gt;&gt;&lt;&lt;run window.sleepUntilFull()&gt;&gt;&lt;&lt;/link&gt;&gt;
       &lt;&lt;link "⏰ Выставить будильник (выбрать время пробуждения)"&gt;&gt;&lt;&lt;run window.openAlarm()&gt;&gt;&lt;&lt;/link&gt;&gt;
       &lt;&lt;link "12 часов"&gt;&gt;&lt;&lt;run window.sleepHours(12)&gt;&gt;&lt;&lt;/link&gt;&gt;
