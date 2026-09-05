@@ -1947,10 +1947,11 @@ window.finishCreation = function(actionId, skillId) {
    или отложить (решить позже). Проекты раздельные по типам.
    =========================================================================== */
 window.PROJECT_TYPES = {
-  art:     { name: "рисунок",   acc: "рисунок",   gen: "рисунка",   emoji: "🖼️", skill: "art",         hub: "ArtStudio", sessions: 12, titled: false },
-  program: { name: "программа", acc: "программу", gen: "программы", emoji: "⌨️", skill: "programming", hub: "Computer",  sessions: 24, titled: true  },
-  game:    { name: "игра",      acc: "игру",      gen: "игры",      emoji: "🎮", skill: "programming", hub: "Computer",  sessions: 30, titled: true  },
-  book:    { name: "книга",     acc: "книгу",     gen: "книги",     emoji: "📖", skill: "writing",     hub: "Computer",  sessions: 30, titled: true  }
+  // qf — множитель прироста качества за подход (у рисунка меньше подходов, поэтому ему больше)
+  art:     { name: "рисунок",   acc: "рисунок",   gen: "рисунка",   emoji: "🖼️", skill: "art",         hub: "ArtStudio", sessions: 12, titled: false, qf: 2.2 },
+  program: { name: "программа", acc: "программу", gen: "программы", emoji: "⌨️", skill: "programming", hub: "Computer",  sessions: 24, titled: true,  qf: 1.0 },
+  game:    { name: "игра",      acc: "игру",      gen: "игры",      emoji: "🎮", skill: "programming", hub: "Computer",  sessions: 30, titled: true,  qf: 1.0 },
+  book:    { name: "книга",     acc: "книгу",     gen: "книги",     emoji: "📖", skill: "writing",     hub: "Computer",  sessions: 30, titled: true,  qf: 1.0 }
 };
 
 window._projects = function(){
@@ -1973,15 +1974,37 @@ window.hasProject = function(type){
 // Прирост качества за один 10-минутный подход.
 // БЕЗ жёсткого потолка: новичок получает мало качества за подход
 // (качество заметно отстаёт от прогресса), но доработками можно догнать до 100%.
-// Прирост качества за один 10-минутный подход.
-// БЕЗ жёсткого потолка: новичок получает мало качества за подход
-// (качество заметно отстаёт от прогресса), но доработками можно догнать до 100%.
-// При доработке действует ТА ЖА медленная скорость — качество растёт по мере
-// повторного прохождения работы и упирается в низкий навык.
+// ============================================================================
+//  ⚙️  НАСТРОЙКА РОСТА КАЧЕСТВА ПРОЕКТОВ  —  ЭТИ ТРИ ЧИСЛА МОЖНО КРУТИТЬ ВРУЧНУЮ
+// ============================================================================
+//  За ОДИН 10-минутный подход качество прибавляется по формуле:
+//     прибавка% = QUALITY_GAIN_BASE
+//               + QUALITY_GAIN_PER_MASTERY * (уровень_навыка / 10)
+//               + случайно(0 … QUALITY_GAIN_RANDOM)
+//  затем умножается на qf типа работы (рисунок 2.2, программа/игра/книга 1.0);
+//  у черты «творческий» для рисунка/книги итог ×1.15.
+//
+//  Чем МЕНЬШЕ числа — тем медленнее растёт качество, тем сильнее оно отстаёт
+//  от прогресса и тем больше проходов-«доработок» нужно до 100%.
+//
+//  Ориентир по ИГРЕ (30 подходов), качество за ОДИН полный проход (макс. бросок):
+//     ур.0 ≈ 8%   ·   ур.1 ≈ 17%   ·   ур.3 ≈ 35%   ·   ур.5 ≈ 53%   ·   ур.10 ≈ 98%
+//  Хотите ещё медленнее для новичков — уменьшайте QUALITY_GAIN_BASE и _RANDOM.
+//  Хотите, чтобы и мастера делали работу не с первого раза — уменьшайте _PER_MASTERY.
+window.QUALITY_GAIN_BASE        = 0.10;  // базовый прирост новичку (0 уровень) за подход
+window.QUALITY_GAIN_PER_MASTERY = 3.00;  // добавка за мастерство (на 10 ур. = +3.0 за подход)
+window.QUALITY_GAIN_RANDOM      = 0.15;  // случайный разброс (удача), 0..это значение
+
+// Прирост качества за один 10-минутный подход (без жёсткого потолка).
+// Новичок получает совсем мало (качество сильно отстаёт от прогресса),
+// мастер — много; доработками качество в итоге догоняется до 100%.
 window._projectQualityGain = function(type){
   var cfg = window.PROJECT_TYPES[type];
   var mastery = window.skillMastery(window.skillLevel(cfg.skill));
-  var gain = 0.4 + mastery * 3.0 + window._qualityRoll() * 0.8;
+  var gain = window.QUALITY_GAIN_BASE
+           + window.QUALITY_GAIN_PER_MASTERY * mastery
+           + window._qualityRoll() * window.QUALITY_GAIN_RANDOM;
+  gain *= (cfg.qf || 1);
   if (window.hasTrait && window.hasTrait("creative") && (type === "art" || type === "book")) gain *= 1.15;
   return gain;
 };
