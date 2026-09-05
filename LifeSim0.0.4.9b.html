@@ -1043,9 +1043,68 @@ window.onDailyRollover = function(t){
     p.stats.earnedToday = 0;   // суточный доход/расход — для сводки/телефона
     p.stats.spentToday = 0;
   }
+  // пассивный доход с опубликованных работ за прошедшие сутки
+  if (typeof window.grantPassiveIncome === "function") {
+    var r = window.grantPassiveIncome();
+    if (r && r.income > 0) {
+      window.toast("📈 Пассивный доход за сутки: ваши работы купили " + r.buyers
+        + " раз. Заработано $" + r.income + ". Известность: " + Math.round(p.notoriety||0) + ".", "good");
+    }
+  }
 };
 
-// Ежемесячная аренда (в первый день нового месяца)
+/* ===========================================================================
+   0.0.4.9b — ИЗВЕСТНОСТЬ (notoriety) и ПАССИВНЫЙ ДОХОД С ОПУБЛИКОВАННЫХ РАБОТ
+   Опубликованные работы (рисунки/программы/игры/книги) каждый ИГРОВОЙ день
+   (сброс в 06:00) приносят пассивный доход: чем выше качество (звёзды) и чем
+   больше известность, тем больше людей покупает/смотрит. По $1 за человека.
+   Известность стартует с 0 и растёт: публикация хорошей работы даёт всплеск,
+   плюс понемногу — от ежедневных продаж. На нулевой известности работ почти
+   никто не видит (нужно «раскрутиться»).
+   =========================================================================== */
+window.NOTORIETY_PER_STAR   = 3;    // известность за публикацию = звёзды качества × это
+window.NOTORIETY_BUYER_DIV  = 10;   // за сколько дневных покупателей +1 к известности
+window.NOTORIETY_MAX        = 1000; // потолок известности (масштабирование шкалы)
+
+window.addNotoriety = function(amount){
+  var p = State.variables.game.player;
+  if (typeof p.notoriety !== "number") p.notoriety = 0;
+  p.notoriety = Math.max(0, Math.min(window.NOTORIETY_MAX, Math.round((p.notoriety || 0) + amount)));
+  return p.notoriety;
+};
+
+// Сколько человек купит/посмотрит работу за день (от звёзд качества и известности)
+window.dailyBuyers = function(work){
+  var stars = work.quality || 1;
+  var noto  = State.variables.game.player.notoriety || 0;
+  // качество задаёт «охват», известность — масштаб; на 0 известности продаж нет
+  return Math.floor(stars * Math.sqrt(noto));
+};
+
+// Начислить пассивный доход за прошедший игровой день (вызывается в 06:00)
+window.grantPassiveIncome = function(){
+  var p = State.variables.game.player;
+  if (!Array.isArray(p.works) || !p.works.length) return { buyers: 0, income: 0 };
+  var totalBuyers = 0, totalIncome = 0;
+  p.works.forEach(function(w){
+    var buyers = window.dailyBuyers(w);
+    if (buyers <= 0) return;
+    totalBuyers += buyers;
+    var income = buyers * 1;                 // $1 с покупателя
+    w.earnings  = (w.earnings || 0) + income;
+    w.buyers    = (w.buyers || 0) + buyers;
+    totalIncome += income;
+  });
+  if (totalIncome > 0) {
+    window.addMoney(totalIncome);
+    // понемногу известности от продаж
+    window.addNotoriety(totalBuyers / window.NOTORIETY_BUYER_DIV);
+    if (typeof p.stats === "object") p.stats.passiveTotal = (p.stats.passiveTotal || 0) + totalIncome;
+  }
+  return { buyers: totalBuyers, income: totalIncome };
+};
+
+// Ежемесячная квартплата (в первый день нового месяца)
 window.chargeMonthlyRent = function(){
   var p = State.variables.game.player;
   var h = (typeof window.getHousing === "function") ? window.getHousing(p.housing) : null;
@@ -1054,9 +1113,9 @@ window.chargeMonthlyRent = function(){
   var r = window.spendMoney(rent);
   if (p.stats) p.stats.rentPaidTotal = (p.stats.rentPaidTotal || 0) + rent;
   if (r.debt > 0) {
-    window.toast("🏠 Новый месяц: аренда $" + rent + ". Хватило $" + r.paid + ", ещё $" + r.debt + " ушло в ДОЛГ.", "bad");
+    window.toast("🏠 Новый месяц — квартплата $" + rent + ". Хватило $" + r.paid + ", ещё $" + r.debt + " ушло в ДОЛГ.", "bad");
   } else {
-    window.toast("🏠 Новый месяц — списана аренда: -$" + rent + ".", "info");
+    window.toast("🏠 Новый месяц — списана квартплата: -$" + rent + ".", "info");
   }
 };
 
@@ -1749,7 +1808,7 @@ window.migrateGame = function() {
   if (g.time && typeof g.time.clock !== "number") g.time.clock = 0;
   if (!g.player.stats) g.player.stats = { moneyEarned: 0, moneySpent: 0,
     shiftsWorked: 0, daysPlayed: 1, artSold: 0, hospitalVisits: 0,
-    earnedToday: 0, spentToday: 0, rentPaidTotal: 0 };
+    earnedToday: 0, spentToday: 0, rentPaidTotal: 0, passiveTotal: 0 };
   if (g.player.stats) {
     if (typeof g.player.stats.earnedToday !== "number") g.player.stats.earnedToday = 0;
     if (typeof g.player.stats.spentToday !== "number") g.player.stats.spentToday = 0;
@@ -1758,6 +1817,8 @@ window.migrateGame = function() {
   if (!g.player.jobStats) g.player.jobStats = {};   // {jobId: {shifts, earned}}
   if (!Array.isArray(g.player.moodlets)) g.player.moodlets = [];  // мудлеты 0.0.4.3
   if (typeof g.player.debt !== "number") g.player.debt = 0;        // долг больнице/счетам 0.0.4.6
+  if (typeof g.player.notoriety !== "number") g.player.notoriety = 0;  // известность 0.0.4.9b
+  if (g.player.stats && typeof g.player.stats.passiveTotal !== "number") g.player.stats.passiveTotal = 0;
   if (!g.player.creations) g.player.creations = {};               // созданные произведения 0.0.4.7
   if (!Array.isArray(g.player.works)) g.player.works = [];
   // работы из старых сейвов: добавить недостающие поля портфолио
@@ -1815,7 +1876,7 @@ jQuery(document).on(":load", function(){ try { window.migrateGame(); } catch(e){
 // Дневной лимит сбрасывается в 06:00 (DAILY_RESET_HOUR), не в полночь.
 window._skillLimitText = function(id){
   return "📚 На сегодня вы усвоили всё, что можно по навыку «" + window.skillName(id)
-    + "». Новое появится после шести утра — попробуйте завтра.";
+    + "». Продолжить изучение можно будет завтра.";
 };
 
 // Начисление опыта навыку за одно занятие.
@@ -2240,11 +2301,17 @@ window._doPublish = function(type, title){
   p.creations[key] = (p.creations[key] || 0) + 1;
   var name = (type === "art") ? ("Рисунок №" + p.creations[key]) : title;
   if (!Array.isArray(p.works)) p.works = [];
-  // earnings зарезервировано под экономику (гонорары/продажи)
-  p.works.push({ kind: key, kindType: type, name: name, quality: stars, day: g_day(), earnings: 0 });
+  // earnings/buyers накапливаются пассивным доходом; notoAtPublish — известность на момент выхода
+  p.works.push({ kind: key, kindType: type, name: name, quality: stars, day: g_day(),
+                 earnings: 0, buyers: 0, notoAtPublish: (p.notoriety||0) });
+  // всплеск известности за релиз (тем больше, чем выше качество)
+  var notoGain = stars * window.NOTORIETY_PER_STAR;
+  var notoAfter = window.addNotoriety(notoGain);
   window.addMoodlet(stars >= 4 ? "published" : "finished_work");
   window.toast("🚀 Вы опубликовали «" + name + "»! Качество: " + window.qualityStars(stars)
-    + (stars >= 4 ? " Публика в восторге!" : " Сойдёт для начала."), stars >= 4 ? "good" : "info");
+    + " Известность +" + notoGain + " (теперь " + Math.round(notoAfter) + ")."
+    + (stars >= 4 ? " Публика в восторге!" : " Работа начнёт приносить доход, когда появится известность."),
+    stars >= 4 ? "good" : "info");
   window._projects()[type] = { progress: 0, quality: 0, sessions: 0, revisions: 0, revising: false, done: false };
   window.finishAction();
   Engine.play(cfg.hub);
@@ -2343,14 +2410,37 @@ window.HOSPITAL_REASONS = {
 // Острые дебаффы, которые больница снимает (травмы, ожоги, срывы).
 window.HOSPITAL_CURES = ["shock","muscle_pull","back_strain","burned_hand","minor_burn","cut_finger"];
 
+// Экстренная доставка в больницу: телепортируем в пассаж Hospital (НЕ лечим сразу).
+// Лечение запускается кнопкой «Пройти лечение» -> treatAtHospital().
 window.sendToHospital = function(reason) {
   window.migrateGame();
-  var g = State.variables.game, p = g.player;
+  var g = State.variables.game;
   reason = reason || "manual";
+  window._hospitalReason = reason;
+  g.location = "hospital";
+  window.toast("🚑 Вас срочно доставили в больницу.", "bad");
+  window.finishAction();
+  setTimeout(function(){ Engine.play("Hospital"); }, 0);
+};
+
+// Текст причины обращения для пассажа приёма
+window.hospitalIntake = function(){
+  var reason = window._hospitalReason || "manual";
+  if (reason === "manual") return "";
+  var why = window.HOSPITAL_REASONS[reason] || window.HOSPITAL_REASONS.manual;
+  return '<p class="cc-hint" style="color:#e58b8b;">Вы ' + why
+    + '. Врач осматривает вас — травму нужно лечить.</p>';
+};
+
+// Собственно лечение (кнопка в пассаже Hospital): сутки в стационаре, счёт, домой.
+window.treatAtHospital = function() {
+  window.migrateGame();
+  var g = State.variables.game, p = g.player;
+  var reason = window._hospitalReason || "manual";
   var n = p.needs;
 
   // 1) сутки лечения (промотка времени в «больничном» режиме — энергия растёт)
-  p.sleeping = true; // чтобы updateNeeds восстанавливал энергию, как во сне/отдыхе
+  p.sleeping = true;
   advanceTime(window.HOSPITAL_DAYS * 24 * 60, []);
   p.sleeping = false;
 
@@ -2385,6 +2475,7 @@ window.sendToHospital = function(reason) {
   // 5) возврат домой
   g.location = "home";
   g.room = "living_room";
+  window._hospitalReason = null;
   window.finishAction();
 
   var why = window.HOSPITAL_REASONS[reason] || window.HOSPITAL_REASONS.manual;
@@ -2394,9 +2485,10 @@ window.sendToHospital = function(reason) {
   setTimeout(function(){ Engine.play("Home"); }, 0);
 };
 
-// Добровольно пойти в больницу (через пассаж): стоит денег, снимает травмы.
+// Добровольно пойти в больницу (прихожая -> пассаж Hospital); причина — обычный приём.
 window.goHospitalVoluntary = function() {
-  window.sendToHospital("manual");
+  window._hospitalReason = "manual";
+  Engine.play("Hospital");
 };
 
 /* ===========================================================================
@@ -2993,9 +3085,11 @@ window.openCharacter = function(tab) {
       + '<div>🗓️ Сегодня: <strong>'+window.formatDateLong()+'</strong></div>'
       + '<div style="color:#9aa4c0;">Игровой день №'+(t.totalDays||1)+' · лимиты сбрасываются в 0'+window.DAILY_RESET_HOUR+':00</div>'
       + '<div>💵 Денег: <strong>$'+p.money+'</strong></div>'
+      + '<div>🌟 Известность: <strong>'+Math.round(p.notoriety||0)+'</strong> <span style="color:#9aa4c0;font-size:0.85em;">(из '+window.NOTORIETY_MAX+') — чем выше, тем больше покупают работ</span></div>'
+      + '<div>📈 Пассивный доход с работ (всего): <strong style="color:#7fe0a0;">$'+(st.passiveTotal||0)+'</strong></div>'
       + '<div>📅 За сегодня заработано: <strong style="color:#7fe0a0;">$'+(st.earnedToday||0)+'</strong> · потрачено: <strong style="color:#e58b8b;">$'+(st.spentToday||0)+'</strong></div>'
       + '<div>💰 Всего заработано: <strong>$'+(st.moneyEarned||0)+'</strong></div>'
-      + '<div>🏠 За аренду уплачено всего: <strong>$'+(st.rentPaidTotal||0)+'</strong></div>'
+      + '<div>🏠 Квартплаты уплачено всего: <strong>$'+(st.rentPaidTotal||0)+'</strong></div>'
       + '<div>🛠️ Смен отработано: <strong>'+(st.shiftsWorked||0)+'</strong></div>'
       + '<div>🎨 Работ продано: <strong>'+(st.artSold||0)+'</strong></div>'
       + '<div>🏥 Госпитализаций: <strong>'+(st.hospitalVisits||0)+'</strong></div>'
@@ -3046,16 +3140,17 @@ window.openCharacter = function(tab) {
         + '<div style="flex:1;">'
           + '<div style="font-weight:600;">'+(w.name||("Работа №"+(w.day||"?")))+'</div>'
           + '<div style="font-size:0.8em;color:#9aa4c0;margin-top:2px;">Качество: '
-          + window.qualityStars(w.quality||1) + (w.day ? ' · готова в день '+w.day : '') + '</div>'
+          + window.qualityStars(w.quality||1)
+          + ' · купили: '+(w.buyers||0)+' раз'
+          + (w.day ? ' · вышла в день '+w.day : '') + '</div>'
         + '</div>'
-        + '<div style="font-weight:700;color:#7fe0a0;white-space:nowrap;">$'+(w.earnings||0)+'</div>'
+        + '<div style="font-weight:700;color:#7fe0a0;white-space:nowrap;">+$'+(w.earnings||0)+'</div>'
       + '</div>';
     }
     var out = '<h3 style="margin-top:0;">📁 Портфолио</h3>'
-      + '<p style="font-size:0.85em;color:#9aa4c0;margin-top:0;">Всё, что вы создали: рисунки, программы, игры и книги. '
+      + '<p style="font-size:0.85em;color:#9aa4c0;margin-top:0;">Опубликованные работы приносят пассивный доход каждый день: покупателей тем больше, чем выше качество и ваша <strong style="color:#e0c060;">известность ('+Math.round(p.notoriety||0)+')</strong>. '
       + 'Всего работ: <strong style="color:#dfe5f5;">'+total+'</strong>'
-      + ' · заработано с публикаций: <strong style="color:#7fe0a0;">$'+totalEarn+'</strong>'
-      + ' (гонорары и продажи появятся с экономикой в 0.0.4e).</p>';
+      + ' · заработано с публикаций: <strong style="color:#7fe0a0;">$'+totalEarn+'</strong>.</p>';
     if (!total) {
       out += '<p style="color:#9aa4c0;">Вы пока ничего не опубликовали. Создайте рисунок в мастерской или программу/игру/книгу за компьютером.</p>';
     }
@@ -3235,6 +3330,7 @@ window.devQuickStart = function() {
       earnedToday: 0,
       spentToday: 0,
       rentPaidTotal: 0,
+      passiveTotal: 0,
       shiftsWorked: 0,
       daysPlayed: 1,
       artSold: 0,
@@ -3403,10 +3499,11 @@ window.devQuickStart = function() {
   &lt;div class="cc-main-title"&gt;🏥 Больница&lt;/div&gt;
   &lt;h1 class="cc-step-title"&gt;Вас осматривает врач&lt;/h1&gt;
   &lt;div class="cc-block" style="max-width:560px;margin:0 auto;"&gt;
+    &lt;&lt;print window.hospitalIntake()&gt;&gt;
     &lt;p class="cc-hint"&gt;За лечение больница берёт &lt;strong&gt;$&lt;&lt;= window.HOSPITAL_COST &gt;&gt;&lt;/strong&gt;. Лечение занимает сутки: вы отдохнёте, придёте в себя, все травмы и ожоги пройдут, а потребности восстановятся.&lt;/p&gt;
     &lt;p class="cc-hint"&gt;Травмы сами не проходят — пока не вылечитесь, штрафы и боль останутся. Если денег не хватит, недостающая сумма уйдёт в &lt;strong&gt;долг&lt;/strong&gt; — он будет висеть красной плашкой, пока не расплатитесь.&lt;/p&gt;
     &lt;div class="cc-buttons is-vertical"&gt;
-      &lt;&lt;link "💊 Пройти лечение (-$&lt;&lt;= window.HOSPITAL_COST &gt;&gt;, сутки)"&gt;&gt;&lt;&lt;run window.goHospitalVoluntary()&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "💊 Пройти лечение (-$&lt;&lt;= window.HOSPITAL_COST &gt;&gt;, сутки)"&gt;&gt;&lt;&lt;run window.treatAtHospital()&gt;&gt;&lt;&lt;/link&gt;&gt;
       &lt;&lt;link "🚶 Уйти домой"&gt;&gt;&lt;&lt;goto "Home"&gt;&gt;&lt;&lt;/link&gt;&gt;
     &lt;/div&gt;
   &lt;/div&gt;
