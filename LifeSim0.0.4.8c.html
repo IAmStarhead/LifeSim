@@ -1687,7 +1687,13 @@ window.migrateGame = function() {
   // проекты из старых сейвов: доработки/прогресс по умолчанию
   Object.keys(g.player.projects).forEach(function(t){
     var pr = g.player.projects[t];
-    if (pr && typeof pr === "object" && typeof pr.revisions !== "number") pr.revisions = 0;
+    if (pr && typeof pr === "object") {
+      if (typeof pr.revisions !== "number") pr.revisions = 0;
+      if (typeof pr.revising !== "boolean") pr.revising = false;
+      if (typeof pr.sessions !== "number") pr.sessions = 0;
+      if (typeof pr.progress !== "number") pr.progress = 0;
+      if (typeof pr.quality !== "number") pr.quality = 0;
+    }
   });
 };
 jQuery(document).on(":passagestart", function(){ try { window.migrateGame(); } catch(e){} });
@@ -1941,10 +1947,10 @@ window.finishCreation = function(actionId, skillId) {
    или отложить (решить позже). Проекты раздельные по типам.
    =========================================================================== */
 window.PROJECT_TYPES = {
-  art:     { name: "рисунок",   acc: "рисунок",   emoji: "🖼️", skill: "art",         hub: "ArtStudio", sessions: 12, titled: false },
-  program: { name: "программа", acc: "программу", emoji: "⌨️", skill: "programming", hub: "Computer",  sessions: 24, titled: true  },
-  game:    { name: "игра",      acc: "игру",      emoji: "🎮", skill: "programming", hub: "Computer",  sessions: 30, titled: true  },
-  book:    { name: "книга",     acc: "книгу",     emoji: "📖", skill: "writing",     hub: "Computer",  sessions: 30, titled: true  }
+  art:     { name: "рисунок",   acc: "рисунок",   gen: "рисунка",   emoji: "🖼️", skill: "art",         hub: "ArtStudio", sessions: 12, titled: false },
+  program: { name: "программа", acc: "программу", gen: "программы", emoji: "⌨️", skill: "programming", hub: "Computer",  sessions: 24, titled: true  },
+  game:    { name: "игра",      acc: "игру",      gen: "игры",      emoji: "🎮", skill: "programming", hub: "Computer",  sessions: 30, titled: true  },
+  book:    { name: "книга",     acc: "книгу",     gen: "книги",     emoji: "📖", skill: "writing",     hub: "Computer",  sessions: 30, titled: true  }
 };
 
 window._projects = function(){
@@ -1967,41 +1973,37 @@ window.hasProject = function(type){
 // Прирост качества за один 10-минутный подход.
 // БЕЗ жёсткого потолка: новичок получает мало качества за подход
 // (качество заметно отстаёт от прогресса), но доработками можно догнать до 100%.
-window._projectQualityGain = function(type, revising){
+// Прирост качества за один 10-минутный подход.
+// БЕЗ жёсткого потолка: новичок получает мало качества за подход
+// (качество заметно отстаёт от прогресса), но доработками можно догнать до 100%.
+// При доработке действует ТА ЖА медленная скорость — качество растёт по мере
+// повторного прохождения работы и упирается в низкий навык.
+window._projectQualityGain = function(type){
   var cfg = window.PROJECT_TYPES[type];
   var mastery = window.skillMastery(window.skillLevel(cfg.skill));
-  // основной подход: новичок ~0.8%/подход (игра→~24% к концу прогресса),
-  // мастер L10 — доходит до 100%; доработка (вылизывание) — ещё медленнее
-  var gain = revising
-    ? (0.5 + mastery * 1.6 + window._qualityRoll() * 0.6)
-    : (0.4 + mastery * 3.0 + window._qualityRoll() * 0.8);
+  var gain = 0.4 + mastery * 3.0 + window._qualityRoll() * 0.8;
   if (window.hasTrait && window.hasTrait("creative") && (type === "art" || type === "book")) gain *= 1.15;
   return gain;
 };
 
-window._projectSession = function(type, revising){
+// Один 10-минутный подход: и при создании, и при доработке прогресс
+// набирается заново, а качество по чуть-чуть растёт (медленно на низком навыке).
+window._projectSession = function(type){
   var g = State.variables.game, p = g.player, n = p.needs;
   var cfg = window.PROJECT_TYPES[type];
   var pr = window.getProject(type);
-  if (revising && !pr.done) return pr;
-  if (!revising && pr.done) return pr;
 
   // время 10 минут и лёгкая трата сил
   advanceTime(10, ["fun"]);
   n.energy = Math.max(0, n.energy - 2);
   n.fun    = Math.min(100, Math.max(0, n.fun + 1));
 
-  if (!revising) {
-    // прогресс: ровная доля за подход
-    pr.sessions += 1;
-    pr.progress = Math.min(100, Math.round(pr.sessions / cfg.sessions * 100));
-  } else {
-    pr.revisions = (pr.revisions || 0) + 1;
-  }
+  pr.sessions += 1;
+  pr.progress = Math.min(100, Math.round(pr.sessions / cfg.sessions * 100));
 
   // открыть навык, если он ещё не изучен; качество тянется за мастерством, но без лока
   window.discoverSkill(cfg.skill);
-  var gain = window._projectQualityGain(type, revising);
+  var gain = window._projectQualityGain(type);
   pr.quality = Math.min(100, Math.round((pr.quality + gain) * 10) / 10);
   window._applySkillXp(cfg.skill, 1);
   return pr;
@@ -2013,33 +2015,41 @@ window.workOnProject = function(type){
   if (!cfg) { window.toast("Неизвестный проект.", "warn"); return; }
   var pr = window.getProject(type);
   if (pr.done) { window.renderProject(); return; }
-  pr = window._projectSession(type, false);
+  pr = window._projectSession(type);
 
   if (pr.progress >= 100) {
     pr.done = true;
-    window.toast("✅ " + cfg.emoji + " " + cap(cfg.name) + " готов! Можно опубликовать, удалить или доработать качество.", "good");
+    if (pr.quality >= 100) {
+      window.toast("🌟 " + cfg.emoji + " Качество доведено до идеала! Работа получит 5 звёзд.", "good");
+    } else if (pr.revising) {
+      window.toast("🔧 " + cfg.emoji + " Доработка завершена: качество " + Math.round(pr.quality) + "%. Можно опубликовать или пройти работу ещё раз.", "good");
+    } else {
+      window.toast("✅ " + cfg.emoji + " " + cap(cfg.name) + " готов! Можно опубликовать, удалить или доработать качество.", "good");
+    }
   } else {
-    window.toast(cfg.emoji + " Ещё немного поработали: прогресс " + pr.progress + "%, качество " + Math.round(pr.quality) + "%.", "info");
+    var verb = pr.revising ? "дорабатываем" : "поработали";
+    window.toast(cfg.emoji + " Ещё " + verb + ": прогресс " + pr.progress + "%, качество " + Math.round(pr.quality) + "%.", "info");
   }
   window.finishAction();
   window.renderProject();
 };
 
-// Доработка после завершения: прогресс уже 100%, дополнительные подходы
-// поднимают только качество (медленно, но без потолка).
-window.reviseProject = function(type){
+// Доработка после завершения: прогресс СБРАСЫВАЕТСЯ — работу нужно пройти
+// заново (cfg.sessions подходов). Качество при этом не сбрасывается и медленно
+// растёт по ходу (на низком навыке — очень медленно, без лока сверху).
+window.startRevision = function(type){
   window.migrateGame();
   var cfg = window.PROJECT_TYPES[type];
   if (!cfg) { window.toast("Неизвестный проект.", "warn"); return; }
   var pr = window.getProject(type);
   if (!pr.done) { window.renderProject(); return; }
   if (pr.quality >= 100) { window.toast("Качество уже максимальное — отличная работа!", "good"); window.renderProject(); return; }
-  pr = window._projectSession(type, true);
-  if (pr.quality >= 100) {
-    window.toast("🌟 Качество доведено до идеала! Работа получит 5 звёзд.", "good");
-  } else {
-    window.toast("🔧 Доработка: качество " + Math.round(pr.quality) + "%.", "info");
-  }
+  pr.revising = true;
+  pr.revisions = (pr.revisions || 0) + 1;
+  pr.done = false;
+  pr.progress = 0;
+  pr.sessions = 0;
+  window.toast("🔧 Начинаем доработку: пройдите " + cap(cfg.name) + " заново — прогресс сбросился, качество подтянется по ходу (" + Math.round(pr.quality) + "% сейчас).", "info");
   window.finishAction();
   window.renderProject();
 };
@@ -2070,18 +2080,28 @@ window.publishProject = function(type){
   if (cfg.titled) {
     window._pubType = type;
     Dialog.setup("✏️ Как назовём работу?");
-    var body = '<p class="cc-hint" style="margin-bottom:10px;">Введите название ' + cfg.acc
+    // КНОПКИ — обычным HTML (вики-макросы в теле Dialog.wiki рендерились как текст).
+    var body = '<p class="cc-hint" style="margin-bottom:10px;">Введите название ' + cfg.gen
       + ' (жанр, описание и т.п. добавим позже).</p>'
       + '<input id="work-title-input" type="text" maxlength="60" placeholder="Например: '
       + window._sampleTitle(type) + '" style="width:100%;box-sizing:border-box;padding:10px;border-radius:8px;'
       + 'border:1px solid rgba(255,255,255,0.25);background:rgba(0,0,0,0.35);color:#eef1f8;font-size:15px;">'
-      + '<div class="cc-buttons is-vertical" style="margin-top:12px;">';
-    Dialog.wiki(body
-      + '&lt;&lt;link "🚀 Опубликовать"&gt;&gt;&lt;&lt;run window._confirmPublish()&gt;&gt;&lt;&lt;/link&gt;&gt;'
-      + '&lt;&lt;link "Отмена"&gt;&gt;&lt;&lt;run Dialog.close()&gt;&gt;&lt;&lt;/link&gt;&gt;'
-      + '</div>');
+      + '<div class="cc-buttons is-vertical" style="margin-top:12px;">'
+      + '<button type="button" id="work-title-ok" style="padding:10px 16px;border-radius:8px;cursor:pointer;'
+      +   'border:1px solid #3fb96b;background:#2f7d54;color:#fff;font-size:15px;">🚀 Опубликовать</button>'
+      + '<button type="button" id="work-title-cancel" style="padding:10px 16px;border-radius:8px;cursor:pointer;'
+      +   'border:1px solid #4a5578;background:#2a3245;color:#dfe5f5;font-size:15px;">Отмена</button>'
+      + '</div>';
+    Dialog.wiki(body);
     Dialog.open();
-    setTimeout(function(){ var el = document.getElementById("work-title-input"); if (el) el.focus(); }, 60);
+    setTimeout(function(){
+      var el = document.getElementById("work-title-input");
+      if (el) { el.focus(); el.addEventListener("keydown", function(ev){ if (ev.key === "Enter") { ev.preventDefault(); window._confirmPublish(); } }); }
+      var ok = document.getElementById("work-title-ok");
+      if (ok) ok.addEventListener("click", function(){ window._confirmPublish(); });
+      var cn = document.getElementById("work-title-cancel");
+      if (cn) cn.addEventListener("click", function(){ Dialog.close(); });
+    }, 80);
   } else {
     window._doPublish(type, "");
   }
@@ -2109,14 +2129,14 @@ window._doPublish = function(type, title){
   window.addMoodlet(stars >= 4 ? "published" : "finished_work");
   window.toast("🚀 Вы опубликовали «" + name + "»! Качество: " + window.qualityStars(stars)
     + (stars >= 4 ? " Публика в восторге!" : " Сойдёт для начала."), stars >= 4 ? "good" : "info");
-  window._projects()[type] = { progress: 0, quality: 0, sessions: 0, revisions: 0, done: false };
+  window._projects()[type] = { progress: 0, quality: 0, sessions: 0, revisions: 0, revising: false, done: false };
   window.finishAction();
   Engine.play(cfg.hub);
 };
 function g_day(){ var t = State.variables.game.time; return t && t.day; }
 
 window.deleteProject = function(type){
-  window._projects()[type] = { progress: 0, quality: 0, sessions: 0, revisions: 0, done: false };
+  window._projects()[type] = { progress: 0, quality: 0, sessions: 0, revisions: 0, revising: false, done: false };
   window.toast("🗑️ Вы забросили и удалили черновик. Бывает!", "warn");
   window.finishAction();
   window.renderProject();
@@ -2128,6 +2148,7 @@ window.projectTitle = function(type){
   var cfg = window.PROJECT_TYPES[type];
   var pr = window.getProject(type);
   if (pr.done) return cfg.emoji + " " + cap(cfg.name) + " — готово!";
+  if (pr.revising) return cfg.emoji + " " + cap(cfg.name) + " — доработка";
   if (pr.sessions > 0) return cfg.emoji + " " + cap(cfg.name) + " — в работе";
   return cfg.emoji + " " + cap(cfg.name);
 };
@@ -2168,16 +2189,19 @@ window.projectBody = function(type){
   var h = '<div style="text-align:left;">';
   h += '<p class="cc-hint">Один подход — 10 минут. Синяя шкала — прогресс, золотая — качество. '
      + 'Чем выше навык «'+window.skillName(cfg.skill)+'», тем быстрее растёт качество. '
-     + 'У новичка качество отстаёт от прогресса — но после завершения его можно догнать доработками.</p>';
+     + (pr.revising
+        ? 'Идёт <strong>доработка</strong>: пройдите работу заново — прогресс сброшен, качество растёт по ходу. '
+        : 'У новичка качество отстаёт от прогресса. После завершения можно отправить работу на доработку — прогресс придётся пройти заново, а качество подтянется. ')
+     + '</p>';
   h += bar("📊 Прогресс", p, "#3f8fd6");
   h += bar("⭐ Качество", q, "#e0b341");
   if (pr.done) {
     h += '<p style="color:#7fd39a;margin-top:6px;">Работа завершена! Итоговое качество: '+window.qualityStars(window.projectStars(q))+'</p>';
     if (q < 100) {
-      h += '<p style="color:#9aa4c0;margin-top:2px;font-size:13px;">💡 Можно опубликовать сразу или «доработать», чтобы поднять качество (и звёзды). Доработок сделано: '+(pr.revisions||0)+'.</p>';
+      h += '<p style="color:#9aa4c0;margin-top:2px;font-size:13px;">💡 Можно опубликовать сразу или «доработать»: работа пройдётся заново (прогресс сбросится), а качество медленно подрастёт. Проходов доработки: '+(pr.revisions||0)+'.</p>';
     }
   } else {
-    h += '<p style="color:#9aa4c0;margin-top:6px;">Подходов: '+pr.sessions+' из ~'+cfg.sessions+'.</p>';
+    h += '<p style="color:#9aa4c0;margin-top:6px;">'+(pr.revising?'🔧 Доработка, подходов: ':'Подходов: ')+pr.sessions+' из ~'+cfg.sessions+'.</p>';
   }
   h += '</div>';
   return h;
@@ -3274,11 +3298,15 @@ window.devQuickStart = function() {
     &lt;&lt;print window.projectBody($projectType)&gt;&gt;
     &lt;div class="cc-buttons is-vertical"&gt;
       &lt;&lt;if not window.getProject($projectType).done&gt;&gt;
-        &lt;&lt;link "✍️ Поработать (10 минут)"&gt;&gt;&lt;&lt;run window.workOnProject($projectType)&gt;&gt;&lt;&lt;/link&gt;&gt;
+        &lt;&lt;if window.getProject($projectType).revising&gt;&gt;
+          &lt;&lt;link "🔧 Дорабатывать (10 минут)"&gt;&gt;&lt;&lt;run window.workOnProject($projectType)&gt;&gt;&lt;&lt;/link&gt;&gt;
+        &lt;&lt;else&gt;&gt;
+          &lt;&lt;link "✍️ Поработать (10 минут)"&gt;&gt;&lt;&lt;run window.workOnProject($projectType)&gt;&gt;&lt;&lt;/link&gt;&gt;
+        &lt;&lt;/if&gt;&gt;
       &lt;&lt;else&gt;&gt;
         &lt;&lt;link "🚀 Опубликовать"&gt;&gt;&lt;&lt;run window.publishProject($projectType)&gt;&gt;&lt;&lt;/link&gt;&gt;
         &lt;&lt;if window.getProject($projectType).quality &lt; 100&gt;&gt;
-          &lt;&lt;link "🔧 Доработать качество (10 минут)"&gt;&gt;&lt;&lt;run window.reviseProject($projectType)&gt;&gt;&lt;&lt;/link&gt;&gt;
+          &lt;&lt;link "🔧 Доработать качество (пройти заново)"&gt;&gt;&lt;&lt;run window.startRevision($projectType)&gt;&gt;&lt;&lt;/link&gt;&gt;
         &lt;&lt;/if&gt;&gt;
         &lt;&lt;link "🗑️ Удалить"&gt;&gt;&lt;&lt;run window.deleteProject($projectType)&gt;&gt;&lt;&lt;/link&gt;&gt;
       &lt;&lt;/if&gt;&gt;
