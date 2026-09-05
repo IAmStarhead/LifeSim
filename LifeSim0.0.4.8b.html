@@ -1303,8 +1303,8 @@ window.TRAITS = [
 ];
 
 window.SKILL_POINTS = 5;   // свободных очков навыков
-window.SKILL_BASE   = 1;   // базовый уровень
-window.SKILL_MAX    = 3;   // максимум (база + 2 в один навык)
+window.SKILL_BASE   = 0;   // базовый уровень (0 = навык ещё не изучен)
+window.SKILL_MAX    = 3;   // максимум в редакторе (3 очка в один навык)
 
 window.SKILLS = [
   { id: "cooking",       name: "Кулинария",     icon: "🍳" },
@@ -1422,15 +1422,16 @@ window.getSkillPointsLeft = function() {
 window.skillInc = function(id) {
   window.migrateGame();
   var sk = window.getSkill(id);
-  // На создании персонажа потолок — SKILL_MAX (3)
   if (sk.level >= window.SKILL_MAX) { window.ccNotify("В редакторе максимум навыка — " + window.SKILL_MAX + ". Дальше растите в игре."); return; }
   if (window.getSkillPointsLeft() <= 0) { window.ccNotify("Свободные очки навыков закончились."); return; }
   sk.level += 1;
+  sk.known = true;   // вложили очки -> навык известен с самого начала
 };
 window.skillDec = function(id) {
   window.migrateGame();
   var sk = window.getSkill(id);
-  if (sk.level > window.SKILL_BASE) sk.level -= 1;
+  if (sk.level > 0) sk.level -= 1;
+  if (sk.level <= 0) sk.known = false;
 };
 window.skillName = function(id) {
   var n = id;
@@ -1578,14 +1579,18 @@ window.hasTrait = function(id) {
   return !!(p && Array.isArray(p.traits) && p.traits.indexOf(id) !== -1);
 };
 // Сколько опыта нужно для перехода с уровня L на L+1 (медленная кривая)
-window.skillXpNeed = function(level) { return 50 + (level - 1) * 50; };
+window.skillXpNeed = function(level) { return level <= 0 ? 40 : 50 + (level - 1) * 50; };
 
 // Низкоуровневое начисление опыта с повышением уровней (БЕЗ суточного лимита).
 // Суточный лимит практики учитывается отдельно в gainSkillXp; работа вызывает
 // эту функцию напрямую (медленный рост, не тратит лимит). Возвращает {gained, leveledUp, level}.
 window._applySkillXp = function(id, amount) {
+  var discovered = window.discoverSkill(id);
   var sk = window.getSkill(id);
   var before = sk.level;
+  if (discovered) {
+    window.toast("🌱 Вы начали изучать новый навык: " + window.skillName(id) + "!", "good");
+  }
   sk.xp += amount;
   var leveled = false;
   while (sk.level < window.SKILL_MAX_LEVEL && sk.xp >= window.skillXpNeed(sk.level)) {
@@ -1596,10 +1601,9 @@ window._applySkillXp = function(id, amount) {
   if (sk.level >= window.SKILL_MAX_LEVEL) sk.xp = 0;
   if (leveled) {
     window.toast("📈 " + window.skillName(id) + " — новый уровень " + sk.level + "!", "good");
-    // рост навыка поднимает настроение — мудлет «Гордость»
     if (window.addMoodlet) window.addMoodlet("proud");
   }
-  return { gained: amount, leveledUp: sk.level > before, level: sk.level };
+  return { gained: amount, leveledUp: sk.level > before, level: sk.level, discovered: discovered };
 };
 
 // Нормализует запись навыка к {level, xp}. Мигрирует старые числовые значения.
@@ -1607,14 +1611,29 @@ window.getSkill = function(id) {
   var s = State.variables.game.player.skills;
   var v = s[id];
   if (typeof v !== "object" || v === null) {
-    v = { level: Number(v) || window.SKILL_BASE || 1, xp: 0 };
+    // нечисловое/отсутствует -> уровень 0 (навык ещё не изучен)
+    v = { level: 0, xp: 0 };
     s[id] = v;
   }
-  if (typeof v.level !== "number") v.level = window.SKILL_BASE || 1;
+  if (typeof v.level !== "number") v.level = 0;
   if (typeof v.xp !== "number")    v.xp = 0;
+  if (typeof v.known !== "boolean") v.known = (v.level > 0);
   return v;
 };
 window.skillLevel = function(id) { return window.getSkill(id).level; };
+// Известен ли навык игроку (вложены очки при создании или открыт занятием)
+window.skillKnown = function(id) {
+  var sk = State.variables.game.player.skills[id];
+  if (sk && typeof sk === "object" && sk.known) return true;
+  return window.skillLevel(id) > 0;
+};
+// Открыть новый навык при первом занятии (возвращает true, если только что открыт)
+window.discoverSkill = function(id) {
+  var sk = window.getSkill(id);
+  if (sk.known) return false;
+  sk.known = true;
+  return true;
+};
 window.skillName2 = window.skillName; // на случай старых вызовов
 
 // Миграция состояния для новых версий (идемпотентна; безопасна на любом пассаже)
@@ -1623,12 +1642,17 @@ window.migrateGame = function() {
   if (!g) return;
   if (!g.player) g.player = {};
   if (!g.player.skills) g.player.skills = {};
-  // навыки -> {level, xp}
+  // навыки -> {level, xp, known}; уровень по умолчанию 0 (ещё не изучен)
   if (window.SKILLS) {
     window.SKILLS.forEach(function(k){
       var v = g.player.skills[k.id];
       if (typeof v !== "object" || v === null) {
-        g.player.skills[k.id] = { level: Number(v) || 1, xp: 0 };
+        var oldLevel = Number(v) || 0;
+        g.player.skills[k.id] = { level: oldLevel, xp: 0, known: oldLevel > 0 };
+      } else {
+        if (typeof v.level !== "number") v.level = 0;
+        if (typeof v.xp !== "number") v.xp = 0;
+        if (typeof v.known !== "boolean") v.known = v.level > 0;
       }
     });
   }
@@ -1755,33 +1779,55 @@ window.QUALITY_TEXT = {
 // Базовая случайная величина качества 0..1 (изолируемо для тестов через Math.random)
 window._qualityRoll = function() { return Math.random(); };
 
+// «Мастерство» 0..1 от уровня навыка (уровень 0/1 -> ~0..0.1, 10 -> 1)
+window.skillMastery = function(level){
+  var L = Math.max(0, Math.min(window.SKILL_MAX_LEVEL, level));
+  return L / window.SKILL_MAX_LEVEL;
+};
+// Максимально доступное качество (1..5 звёзд) по уровню навыка.
+// Новичок (0–1 уровень) НЕ может сделать шедевр: потолок 1–2 звезды.
+window.skillQualityCap = function(skillId){
+  var lvl = (skillId && window.skillLevel) ? window.skillLevel(skillId) : 0;
+  if (lvl <= 0) return 1;   // ещё не изучен — только «проба пера»
+  if (lvl <= 1) return 2;
+  if (lvl <= 3) return 3;
+  if (lvl <= 5) return 4;
+  return 5;                 // шедевры — у мастеров (6+)
+};
+// Потолок качества проекта в ПРОЦЕНТАХ шкалы по уровню навыка (0..100).
+// 0 ур.: ~20%, 1: ~40%, 3: ~60%, 5: ~80%, 6+: 100%.
+window.skillQualityCapPct = function(skillId){
+  var stars = window.skillQualityCap(skillId);
+  return stars * 20;
+};
+
 // Рассчитать качество результата занятия (1..5).
 // Зависит от уровня навыка (1..10): чем выше уровень, тем выше шанс хорошей работы.
 window.rollQuality = function(skillId, opts) {
   opts = opts || {};
-  var level = (skillId && window.skillLevel) ? window.skillLevel(skillId) : 1;
-  // «уровень мастерства» 0..1 (уровень 1 -> ~0.1, уровень 10 -> ~1.0)
-  var mastery = (Math.max(1, Math.min(window.SKILL_MAX_LEVEL, level)) - 1) / (window.SKILL_MAX_LEVEL - 1);
+  var level = (skillId && window.skillLevel) ? window.skillLevel(skillId) : 0;
+  var mastery = window.skillMastery(level);
   // черта «творческий» помогает в творческих занятиях
   var bonus = 0;
   if (window.hasTrait && window.hasTrait("creative") &&
-      (skillId === "art" || skillId === "cooking" || skillId === "dance")) bonus += 0.15;
-  // усталость/голод чуть занижают качество (мастерство «съедается»)
+      (skillId === "art" || skillId === "cooking" || skillId === "dance" || skillId === "writing")) bonus += 0.1;
+  // усталость/голод чуть занижают качество
   var n = State.variables.game.player.needs;
-  if (n.energy  < 25) mastery -= 0.15;
-  if (n.satiety < 25) mastery -= 0.08;
-  mastery = Math.max(0, Math.min(1, mastery));
+  if (n.energy  < 25) mastery = Math.max(0, mastery - 0.12);
+  if (n.satiety < 25) mastery = Math.max(0, mastery - 0.06);
 
   var roll = window._qualityRoll();                       // 0..1
-  var score = 0.15 + mastery * 0.85 * 0.55 + roll * (0.45 + bonus) + bonus;
+  // базовое качество тянется к уровню навыка, удача добавляет разброс
+  var score = 0.05 + mastery * 0.75 + roll * 0.25 + bonus;
   score = Math.max(0, Math.min(1, score));
-  // переводим в качество 1..5
   var q;
-  if (score < 0.18) q = 1;
-  else if (score < 0.38) q = 2;
-  else if (score < 0.62) q = 3;
-  else if (score < 0.85) q = 4;
+  if (score < 0.16) q = 1;
+  else if (score < 0.36) q = 2;
+  else if (score < 0.58) q = 3;
+  else if (score < 0.80) q = 4;
   else q = 5;
+  // ЖЁСТКИЙ потолок по навыку: новичок не выдаёт шедевр
+  q = Math.min(q, window.skillQualityCap(skillId));
   return q;
 };
 
@@ -1796,7 +1842,7 @@ window.qualityStars = function(q) {
 // Возвращает null, если срыва в этот раз не случилось.
 window.rollSetback = function(actionId, skillId) {
   var level = (skillId && window.skillLevel) ? window.skillLevel(skillId) : 1;
-  var mastery = (Math.max(1, Math.min(window.SKILL_MAX_LEVEL, level)) - 1) / (window.SKILL_MAX_LEVEL - 1);
+  var mastery = window.skillMastery(level);
 
   // ТЯЖЁЛАЯ травма роллится ПЕРВОЙ и независимо (это отдельный слой): при
   // срабатывании ведёт к госпитализации и перекрывает обычный срыв.
@@ -1888,9 +1934,9 @@ window.finishCreation = function(actionId, skillId) {
    =========================================================================== */
 window.PROJECT_TYPES = {
   art:     { name: "рисунок",   acc: "рисунок",   emoji: "🖼️", skill: "art",         hub: "ArtStudio", sessions: 12 },
-  program: { name: "программа", acc: "программу", emoji: "⌨️", skill: "programming", hub: "CodeDesk",  sessions: 24 },
-  game:    { name: "игра",      acc: "игру",      emoji: "🎮", skill: "programming", hub: "CodeDesk",  sessions: 30 },
-  book:    { name: "книга",     acc: "книгу",     emoji: "📖", skill: "writing",     hub: "CodeDesk",  sessions: 30 }
+  program: { name: "программа", acc: "программу", emoji: "⌨️", skill: "programming", hub: "Computer",  sessions: 24 },
+  game:    { name: "игра",      acc: "игру",      emoji: "🎮", skill: "programming", hub: "Computer",  sessions: 30 },
+  book:    { name: "книга",     acc: "книгу",     emoji: "📖", skill: "writing",     hub: "Computer",  sessions: 30 }
 };
 
 window._projects = function(){
@@ -1927,13 +1973,16 @@ window.workOnProject = function(type){
   pr.sessions += 1;
   pr.progress = Math.min(100, Math.round(pr.sessions / cfg.sessions * 100));
 
-  // качество: зависит от уровня навыка (ниже навык — медленнее растёт) + удача
+  // открыть навык, если он ещё не изучен
+  window.discoverSkill(cfg.skill);
+  // качество: растёт прибавкой, но ИТОГ ограничен потолком уровня навыка —
+  // новичок физически не доведёт работу до 100% (максимум ~доля по уровню).
   var skillLvl = window.skillLevel(cfg.skill);
-  var mastery = (Math.max(1, Math.min(window.SKILL_MAX_LEVEL, skillLvl)) - 1) / (window.SKILL_MAX_LEVEL - 1);
-  var gain = 2.2 + mastery * 3.2 + window._qualityRoll() * 2.2;
-  // черта «творческий» помогает рисунку и книге
+  var mastery = window.skillMastery(skillLvl);
+  var gain = 2.2 + mastery * 3.2 + window._qualityRoll() * 2.0;
   if (window.hasTrait && window.hasTrait("creative") && (type === "art" || type === "book")) gain *= 1.15;
-  pr.quality = Math.min(100, Math.round((pr.quality + gain) * 10) / 10);
+  var capPct = window.skillQualityCapPct(cfg.skill);
+  pr.quality = Math.min(capPct, Math.round((pr.quality + gain) * 10) / 10);
 
   // небольшой опыт навыка (без суточного лимита — это проект)
   window._applySkillXp(cfg.skill, 1);
@@ -1989,7 +2038,8 @@ window.deleteProject = function(type){
 
 // Текущее имя проекта для заголовка пассажа
 window.projectTitle = function(type){
-  var cfg = window.PROJECT_TYPES[type] || { emoji: "📦", name: "проект" };
+  if (!window.PROJECT_TYPES[type]) return "📦 Проект";
+  var cfg = window.PROJECT_TYPES[type];
   var pr = window.getProject(type);
   if (pr.done) return cfg.emoji + " " + cap(cfg.name) + " — готово!";
   if (pr.sessions > 0) return cfg.emoji + " " + cap(cfg.name) + " — в работе";
@@ -2004,7 +2054,10 @@ window.openProject = function(type){
   Engine.play("ProjectWork");
 };
 // Перерисовать пассаж проекта (после подхода/удаления)
-window.renderProject = function(){ Engine.play("ProjectWork"); };
+window.renderProject = function(){
+  if (!State.variables.projectType || !window.PROJECT_TYPES[State.variables.projectType]) { Engine.play("Home"); return; }
+  Engine.play("ProjectWork");
+};
 // Вернуться в «хаб» навыка (мастерскую/стол) текущего типа проекта
 window.goProjectHub = function(){
   var t = State.variables.projectType;
@@ -2014,6 +2067,7 @@ window.goProjectHub = function(){
 
 // Рендер тела пассажа проекта (шкалы; кнопки — макросами в пассаже)
 window.projectBody = function(type){
+  if (!window.PROJECT_TYPES[type]) return '<p class="cc-hint">Проект не выбран. Вернитесь к выбору занятия.</p>';
   var cfg = window.PROJECT_TYPES[type];
   var pr = window.getProject(type);
   var p = Math.round(pr.progress), q = Math.round(pr.quality);
@@ -2663,7 +2717,8 @@ window.openCharacter = function(tab) {
 
   // --- Вкладка «Навыки» ---
   function skillsTab() {
-    var rows = window.SKILLS.map(function(k){
+    var known = window.SKILLS.filter(function(k){ return window.skillKnown(k.id); });
+    var rows = known.map(function(k){
       var sk = window.getSkill(k.id);
       var lvl = sk.level, max = window.SKILL_MAX_LEVEL;
       var need = (lvl >= max) ? null : window.skillXpNeed(lvl);
@@ -2687,9 +2742,12 @@ window.openCharacter = function(tab) {
         + '<div style="font-weight:700;font-size:1.15em;color:#5fd68a;min-width:34px;text-align:right;">'+lvl+'</div>'
       + '</div>';
     }).join("");
+    var hiddenCount = window.SKILLS.length - known.length;
     return '<h3 style="margin-top:0;">📊 Навыки</h3>'
-      + '<p style="font-size:0.85em;color:#9aa4c0;margin-top:0;">Навыки растут от занятий (по +5 опыта за раз). В день доступно до '+window.SKILL_DAILY_ACTIONS+' занятий одного навыка — потом нужен отдых до завтра.</p>'
-      + rows;
+      + '<p style="font-size:0.85em;color:#9aa4c0;margin-top:0;">Известно навыков: '+known.length+' из '+window.SKILLS.length
+      + '. Навыки открываются, когда вы впервые берётесь за дело, и растут от занятий (по +5 опыта; до '+window.SKILL_DAILY_ACTIONS+' занятий в день).'
+      + (hiddenCount>0 ? ' Остальные '+hiddenCount+' навыков пока скрыты — вы откроете их новыми действиями.' : '') + '</p>'
+      + (rows || '<p style="color:#9aa4c0;">Пока ни одного навыка. Возьмитесь за что-нибудь, чтобы открыть первый!</p>');
   }
 
   // --- Вкладка «Основное» ---
@@ -2820,6 +2878,32 @@ window.finishCharacterCreation = function() {
   g.started = true;                                          // показываем игровой интерфейс
   return h;
 };
+
+// БЫСТРЫЙ СТАРТ для разработки: стандартный персонаж «Роберт», пресет внешности
+// (как Адам), стандартные навыки и богатый дом — сразу в игру без создания.
+window.devQuickStart = function() {
+  var g = State.variables.game, p = g.player;
+  p.name = "Роберт"; p.surname = ""; p.age = 25; p.gender = "муж";
+  // внешность — пресет «Адам»
+  if (typeof window.applyAdamPreset === "function") window.applyAdamPreset();
+  p.name = "Роберт";
+  // стартовый набор навыков для удобной проверки: по 2 очка в несколько навыков
+  window.SKILLS.forEach(function(k){ p.skills[k.id] = { level: 0, xp: 0, known: false }; });
+  [["programming",3],["cooking",2],["sport",2]].forEach(function(pr){
+    p.skills[pr[0]] = { level: pr[1], xp: 0, known: true };
+  });
+  p.skillDaily = {}; p.skillCappedToday = [];
+  p.traits = [];
+  // богатый дом (без аренды)
+  var mansion = window.HOUSING_OPTIONS.filter(function(h){ return h.dev; })[0] || window.HOUSING_OPTIONS[window.HOUSING_OPTIONS.length-1];
+  p.housing = mansion.id;
+  p.money = 10000;
+  g.location = "home";
+  g.room = mansion.startRoom || "living_room";
+  g.started = true;
+  window.toast("⚡ Быстрый старт: Роберт, богатый дом, стартовые навыки.", "good");
+  Engine.play("Home");
+};
 </script><tw-tag name="widget" color="purple"></tw-tag><tw-passagedata pid="1" name="StoryTitle" tags="" position="725,350" size="100,100">LifeSim</tw-passagedata><tw-passagedata pid="2" name="StoryAuthor" tags="" position="700,525" size="100,100">Starhead</tw-passagedata><tw-passagedata pid="3" name="StoryInit" tags="" position="575,525" size="100,100">&lt;&lt;set $game = {
   location: "home",
   room: "living_room",
@@ -2866,17 +2950,17 @@ window.finishCharacterCreation = function() {
     },
     traits: [],
     skills: {
-      cooking: 1,
-      cleaning: 1,
-      charisma: 1,
-      sport: 1,
-      intelligence: 1,
-      programming: 1,
-      art: 1,
-      dance: 1,
-      repair: 1,
-      gardening: 1,
-      writing: 1
+      cooking: 0,
+      cleaning: 0,
+      charisma: 0,
+      sport: 0,
+      intelligence: 0,
+      programming: 0,
+      art: 0,
+      dance: 0,
+      repair: 0,
+      gardening: 0,
+      writing: 0
     },
     housing: null,
     skillDaily: {},
@@ -2990,7 +3074,7 @@ window.finishCharacterCreation = function() {
       &lt;&lt;link "🏋️ Спорт (до +15 досуга, -15 энергии, -5 сытости, 1 час)"&gt;&gt;&lt;&lt;run performAction(&quot;sport&quot;)&gt;&gt;&lt;&lt;/link&gt;&gt;
     &lt;&lt;/if&gt;&gt;
     &lt;&lt;if $game.room == "office"&gt;&gt;
-      &lt;&lt;link "💻 Программировать / писать…"&gt;&gt;&lt;&lt;goto "CodeDesk"&gt;&gt;&lt;&lt;/link&gt;&gt;
+      &lt;&lt;link "💻 Сесть за компьютер…"&gt;&gt;&lt;&lt;goto "Computer"&gt;&gt;&lt;&lt;/link&gt;&gt;
     &lt;&lt;/if&gt;&gt;
     &lt;&lt;if $game.room == "workshop"&gt;&gt;
       &lt;&lt;link "🎨 Заняться творчеством…"&gt;&gt;&lt;&lt;goto "ArtStudio"&gt;&gt;&lt;&lt;/link&gt;&gt;
@@ -3092,12 +3176,12 @@ window.finishCharacterCreation = function() {
     &lt;/div&gt;
   &lt;/div&gt;
 &lt;/div&gt;
-&lt;&lt;/nobr&gt;&gt;</tw-passagedata><tw-passagedata pid="911" name="CodeDesk" tags="" position="1200,1200" size="100,100">&lt;&lt;nobr&gt;&gt;
+&lt;&lt;/nobr&gt;&gt;</tw-passagedata><tw-passagedata pid="911" name="Computer" tags="" position="1200,1200" size="100,100">&lt;&lt;nobr&gt;&gt;
 &lt;div class="character-creation"&gt;
-  &lt;div class="cc-main-title"&gt;💻 Кабинет: код и тексты&lt;/div&gt;
+  &lt;div class="cc-main-title"&gt;💻 Компьютер&lt;/div&gt;
   &lt;h1 class="cc-step-title"&gt;Чем займёмся?&lt;/h1&gt;
   &lt;div class="cc-block" style="max-width:560px;margin:0 auto;"&gt;
-    &lt;p class="cc-hint"&gt;Здесь занимаются программированием и писательством. Практика быстро растит навык, а программы, игры и книги — это большие проекты на много подходов по 10 минут.&lt;/p&gt;
+    &lt;p class="cc-hint"&gt;За компьютером занимаются программированием и писательством — это разные навыки. Практика быстро растит навык, а программы, игры и книги — большие проекты на много подходов по 10 минут.&lt;/p&gt;
     &lt;div class="cc-buttons is-vertical"&gt;
     &lt;&lt;link "🧩 Практиковаться в коде (2 часа)"&gt;&gt;&lt;&lt;run performAction(&quot;program&quot;)&gt;&gt;&lt;&lt;/link&gt;&gt;
     &lt;&lt;link "📝 Писать для практики (1 час, навык писательства)"&gt;&gt;&lt;&lt;run performAction(&quot;write_practice&quot;)&gt;&gt;&lt;&lt;/link&gt;&gt;
@@ -3138,6 +3222,7 @@ window.finishCharacterCreation = function() {
 
   &lt;div class="menu-buttons"&gt;
     &lt;&lt;button "🆕 Новая игра"&gt;&gt;&lt;&lt;goto "CharacterCreation"&gt;&gt;&lt;&lt;/button&gt;&gt;
+    &lt;&lt;button "⚡ Быстрый старт (для разработки)"&gt;&gt;&lt;&lt;run window.devQuickStart()&gt;&gt;&lt;&lt;/button&gt;&gt;
     &lt;&lt;button "💾 Продолжить / Загрузить"&gt;&gt;&lt;&lt;run UI.saves()&gt;&gt;&lt;&lt;/button&gt;&gt;
     &lt;&lt;button "⚙️ Настройки"&gt;&gt;&lt;&lt;run UI.settings()&gt;&gt;&lt;&lt;/button&gt;&gt;
     &lt;&lt;button "👤 Авторы"&gt;&gt;&lt;&lt;run alert("Starhead, DeepSeek, GPT")&gt;&gt;&lt;&lt;/button&gt;&gt;
@@ -3341,7 +3426,7 @@ window.finishCharacterCreation = function() {
 &lt;div class="character-creation"&gt;
   &lt;div class="cc-main-title"&gt;Создание персонажа&lt;/div&gt;
   &lt;h1 class="cc-step-title"&gt;Шаг 4 — Навыки&lt;/h1&gt;
-  &lt;p class="cc-hint"&gt;У всех навыков базовый уровень 1. Свободных очков: &lt;strong&gt;&lt;&lt;= window.getSkillPointsLeft() &gt;&gt;&lt;/strong&gt; из &lt;&lt;= window.SKILL_POINTS &gt;&gt;. В один навык можно вложить максимум 2 очка.&lt;/p&gt;
+  &lt;p class="cc-hint"&gt;Все навыки начинаются с 0. Вложите очки в те, что персонаж уже освоил, — они будут видны в начале. Остальные откроются по ходу игры. Свободных очков: &lt;strong&gt;&lt;&lt;= window.getSkillPointsLeft() &gt;&gt;&lt;/strong&gt; из &lt;&lt;= window.SKILL_POINTS &gt;&gt;. В один навык — максимум &lt;&lt;= window.SKILL_MAX &gt;&gt; очка.&lt;/p&gt;
 
   &lt;div class="cc-block"&gt;
     &lt;h2&gt;Стартовые навыки&lt;/h2&gt;
