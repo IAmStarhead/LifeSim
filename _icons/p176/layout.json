@@ -1,52 +1,52 @@
 {
  "f_round": {
-  "baseX": 16,
+  "baseX": 15,
   "baseY": 9,
-  "baseW": 137,
+  "baseW": 138,
   "baseH": 209,
-  "cx": 88.0,
-  "ht": 1.4,
-  "headH": 112.9,
-  "hw": 117.3
+  "cx": 88,
+  "ht": 1.2,
+  "headH": 112.8,
+  "hw": 117.1
  },
  "f_oval": {
   "baseX": 4,
   "baseY": 9,
-  "baseW": 155,
+  "baseW": 154,
   "baseH": 209,
-  "cx": 88.0,
-  "ht": 1.4,
-  "headH": 126.1,
-  "hw": 113.7
+  "cx": 88,
+  "ht": 1.2,
+  "headH": 125.9,
+  "hw": 113.6
  },
  "f_average": {
-  "baseX": 10,
+  "baseX": 11,
   "baseY": 9,
-  "baseW": 149,
+  "baseW": 150,
   "baseH": 209,
-  "cx": 88.0,
-  "ht": 0.7,
-  "headH": 129.6,
-  "hw": 113.7
+  "cx": 88,
+  "ht": 1.2,
+  "headH": 128.2,
+  "hw": 112.8
  },
  "f_square": {
-  "baseX": 18,
+  "baseX": 19,
   "baseY": 9,
   "baseW": 151,
   "baseH": 209,
-  "cx": 88.0,
-  "ht": 1.4,
-  "headH": 130.3,
-  "hw": 113.1
+  "cx": 88,
+  "ht": 1.2,
+  "headH": 129.4,
+  "hw": 113.8
  },
  "f_long": {
-  "baseX": 25,
+  "baseX": 26,
   "baseY": 9,
   "baseW": 132,
   "baseH": 209,
-  "cx": 88.0,
-  "ht": 1.4,
-  "headH": 133.1,
-  "hw": 104.3
+  "cx": 88,
+  "ht": 1.2,
+  "headH": 133.0,
+  "hw": 105.2
  }
 }
