@@ -1,0 +1,52 @@
+{
+ "f_round": {
+  "baseX": 16,
+  "baseY": 9,
+  "baseW": 137,
+  "baseH": 209,
+  "cx": 88.0,
+  "ht": 1.4,
+  "headH": 112.9,
+  "hw": 117.3
+ },
+ "f_oval": {
+  "baseX": 4,
+  "baseY": 9,
+  "baseW": 155,
+  "baseH": 209,
+  "cx": 88.0,
+  "ht": 1.4,
+  "headH": 126.1,
+  "hw": 113.7
+ },
+ "f_average": {
+  "baseX": 10,
+  "baseY": 9,
+  "baseW": 149,
+  "baseH": 209,
+  "cx": 88.0,
+  "ht": 0.7,
+  "headH": 129.6,
+  "hw": 113.7
+ },
+ "f_square": {
+  "baseX": 18,
+  "baseY": 9,
+  "baseW": 151,
+  "baseH": 209,
+  "cx": 88.0,
+  "ht": 1.4,
+  "headH": 130.3,
+  "hw": 113.1
+ },
+ "f_long": {
+  "baseX": 25,
+  "baseY": 9,
+  "baseW": 132,
+  "baseH": 209,
+  "cx": 88.0,
+  "ht": 1.4,
+  "headH": 133.1,
+  "hw": 104.3
+ }
+}
